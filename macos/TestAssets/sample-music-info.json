@@ -1,0 +1,108 @@
+[
+  {
+    "id": "kw_demo",
+    "name": "Melo 测试音频（酷我）",
+    "singer": "Melo",
+    "source": "kw",
+    "interval": "00:20",
+    "meta": {
+      "songId": "demo",
+      "albumName": "Melo Test",
+      "picUrl": null,
+      "qualitys": [
+        { "type": "128k", "size": null },
+        { "type": "320k", "size": null },
+        { "type": "flac", "size": null }
+      ],
+      "_qualitys": {
+        "128k": { "size": null },
+        "320k": { "size": null },
+        "flac": { "size": null }
+      }
+    }
+  },
+  {
+    "id": "kg_demo",
+    "name": "Melo 测试音频（酷狗）",
+    "singer": "Melo",
+    "source": "kg",
+    "interval": "00:20",
+    "meta": {
+      "songId": "demo",
+      "albumName": "Melo Test",
+      "qualitys": [
+        { "type": "128k", "size": null },
+        { "type": "320k", "size": null },
+        { "type": "flac", "size": null }
+      ],
+      "_qualitys": {
+        "128k": { "size": null },
+        "320k": { "size": null },
+        "flac": { "size": null }
+      }
+    }
+  },
+  {
+    "id": "tx_demo",
+    "name": "Melo 测试音频（QQ 音乐）",
+    "singer": "Melo",
+    "source": "tx",
+    "interval": "00:20",
+    "meta": {
+      "songId": "demo",
+      "albumName": "Melo Test",
+      "qualitys": [
+        { "type": "128k", "size": null },
+        { "type": "320k", "size": null },
+        { "type": "flac", "size": null }
+      ],
+      "_qualitys": {
+        "128k": { "size": null },
+        "320k": { "size": null },
+        "flac": { "size": null }
+      }
+    }
+  },
+  {
+    "id": "wy_demo",
+    "name": "Melo 测试音频（网易云）",
+    "singer": "Melo",
+    "source": "wy",
+    "interval": "00:20",
+    "meta": {
+      "songId": "demo",
+      "albumName": "Melo Test",
+      "qualitys": [
+        { "type": "128k", "size": null },
+        { "type": "320k", "size": null },
+        { "type": "flac", "size": null }
+      ],
+      "_qualitys": {
+        "128k": { "size": null },
+        "320k": { "size": null },
+        "flac": { "size": null }
+      }
+    }
+  },
+  {
+    "id": "mg_demo",
+    "name": "Melo 测试音频（咪咕）",
+    "singer": "Melo",
+    "source": "mg",
+    "interval": "00:20",
+    "meta": {
+      "songId": "demo",
+      "albumName": "Melo Test",
+      "qualitys": [
+        { "type": "128k", "size": null },
+        { "type": "320k", "size": null },
+        { "type": "flac", "size": null }
+      ],
+      "_qualitys": {
+        "128k": { "size": null },
+        "320k": { "size": null },
+        "flac": { "size": null }
+      }
+    }
+  }
+]
