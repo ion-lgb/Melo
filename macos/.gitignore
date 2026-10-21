@@ -1,7 +1,0 @@
-.build/
-build/
-.swiftpm/
-*.xcuserstate
-.DS_Store
-tools/**/node_modules/
-tools/**/package-lock.json

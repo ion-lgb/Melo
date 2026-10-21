@@ -1,0 +1,16 @@
+{
+  "name": "melo-musicSdk-bundle",
+  "private": true,
+  "type": "module",
+  "description": "Build the original LX Music musicSdk (kw/kg/tx/wy/mg) into a JavaScriptCore IIFE bundle for MeloJS.",
+  "scripts": {
+    "fetch-upstream": "bash ../../Scripts/fetch-upstream-source.sh",
+    "build": "node bundle.mjs",
+    "check": "node dev-check.mjs"
+  },
+  "devDependencies": {
+    "buffer": "^6.0.3",
+    "esbuild": "^0.28.2",
+    "pako": "^2.1.0"
+  }
+}

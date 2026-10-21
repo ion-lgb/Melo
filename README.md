@@ -1,167 +1,225 @@
-<p align="center"><a href="https://github.com/lyswhut/lx-music-desktop"><img width="200" src="https://github.com/lyswhut/lx-music-desktop/blob/master/doc/images/icon.png" alt="lx-music logo"></a></p>
+# Melo for macOS
 
-<h1 align="center">LX Music 桌面版</h1>
+> **LX Music Desktop 的 macOS 原生 Swift 移植** —— 保留原版的数据格式、主题、语言包与自定义源脚本生态，用 SwiftUI + AppKit 重写为仅 macOS 的原生应用。
 
-<p align="center">
-  <a href="https://github.com/lyswhut/lx-music-desktop/releases"><img src="https://img.shields.io/github/release/lyswhut/lx-music-desktop" alt="Release version"></a>
-  <a href="https://github.com/lyswhut/lx-music-desktop/actions/workflows/release.yml"><img src="https://github.com/lyswhut/lx-music-desktop/workflows/Build/badge.svg" alt="Build status"></a>
-  <a href="https://github.com/lyswhut/lx-music-desktop/actions/workflows/beta-pack.yml"><img src="https://github.com/lyswhut/lx-music-desktop/workflows/Build%20Beta/badge.svg" alt="Build status"></a>
-  <a href="https://electronjs.org/releases/stable"><img src="https://img.shields.io/github/package-json/dependency-version/lyswhut/lx-music-desktop/dev/electron/master" alt="Electron version"></a>
-  <!-- <a href="https://github.com/lyswhut/lx-music-desktop/releases"><img src="https://img.shields.io/github/downloads/lyswhut/lx-music-desktop/latest/total" alt="Downloads"></a> -->
-  <a href="https://github.com/lyswhut/lx-music-desktop/tree/dev"><img src="https://img.shields.io/github/package-json/v/lyswhut/lx-music-desktop/dev" alt="Dev branch version"></a>
-  <!-- <a href="https://github.com/lyswhut/lx-music-desktop/blob/master/LICENSE"><img src="https://img.shields.io/github/license/lyswhut/lx-music-desktop" alt="License"></a> -->
-</p>
+[![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)](#系统要求)
+[![Swift](https://img.shields.io/badge/Swift-6.4-orange)](https://swift.org)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-292-brightgreen)](#测试)
 
-<!-- [![GitHub release][1]][2]
-[![Build status][3]][4]
-[![GitHub Releases Download][5]][6]
-[![dev branch][7]][8]
-[![GitHub license][9]][10] -->
-
-<!-- [1]: https://img.shields.io/github/release/lyswhut/lx-music-desktop
-[2]: https://github.com/lyswhut/lx-music-desktop/releases
-[3]: https://ci.appveyor.com/api/projects/status/flrsqd5ymp8fnte5?svg=true
-[4]: https://ci.appveyor.com/project/lyswhut/lx-music-desktop
-[5]: https://img.shields.io/github/downloads/lyswhut/lx-music-desktop/latest/total
-[5]: https://img.shields.io/github/downloads/lyswhut/lx-music-desktop/total
-[6]: https://github.com/lyswhut/lx-music-desktop/releases
-[7]: https://img.shields.io/github/package-json/v/lyswhut/lx-music-desktop/dev
-[8]: https://github.com/lyswhut/lx-music-desktop/tree/dev
-[9]: https://img.shields.io/github/license/lyswhut/lx-music-desktop
-[10]: https://github.com/lyswhut/lx-music-desktop/blob/master/LICENSE -->
-
-<p align="center">一个基于 Electron & Vue 开发的音乐软件</p>
-
-## 说明
-
-所用技术栈：
-
-- Electron 30+
-- Vue 3
-
-已支持的平台：
-
-- Linux
-- macOS
-- Windows 7 及以上
-
-*移动版项目地址：https://github.com/lyswhut/lx-music-mobile*
-
-> [!NOTE]
-> 目前新项目 [Any Listen](https://github.com/any-listen/any-listen) 的桌面版、Web 版已实现 LX Music 的大部分功能，并额外支持 WebDAV 歌曲播放、WebDAV 数据同步、独立播放列表等功能。
-> 我们以后的开发精力将主要集中在新项目上，之前大家在 LX Music 提的功能我们也会考虑在新项目中添加。
-> 对于日常使用 LX Music 的人可以试试迁移到 Any Listen，若遇到任何问题可以发 issue 反馈。
->
-> 关于我们开发新项目的原因，可以参考：[LX Music 项目发展调整与新项目计划](https://github.com/lyswhut/lx-music-desktop/issues/1912)。
-
-软件变化请查看[更新日志](https://github.com/lyswhut/lx-music-desktop/blob/master/CHANGELOG.md)。
-
-软件下载请查看 [GitHub Releases](https://github.com/lyswhut/lx-music-desktop/releases)。
-
-使用常见问题请参阅[桌面版常见问题](https://lyswhut.github.io/lx-music-doc/desktop/faq)。
-
-目前本项目的原始发布地址只有 [**GitHub**](https://github.com/lyswhut/lx-music-desktop/releases)，其他渠道均为第三方转载发布，与本项目无关！
-
-为了提高使用门槛，本软件内的默认设置、UI 操作不以新手友好为目标，所以使用前建议先根据你的喜好浏览调整一遍软件设置，阅读一遍[音乐播放列表机制](https://lyswhut.github.io/lx-music-doc/desktop/faq/playlist)及[可用的鼠标、键盘快捷操作](https://lyswhut.github.io/lx-music-doc/desktop/faq/hotkey)。
-
-### Scheme URL 支持
-
-从 v1.17.0 起支持 Scheme URL，可以使用此功能在浏览器等场景下调用 LX Music，我们开发了一个[油猴脚本](https://github.com/lyswhut/lx-music-script#readme)配套使用。
-
-脚本安装地址：[LX Music 辅助脚本](https://greasyfork.org/zh-CN/scripts/438148)。
-
-若你想自己调用 LX Music，可以参考文档「[Scheme URL 支持](https://lyswhut.github.io/lx-music-doc/desktop/scheme-url)」部分。
-
-### 数据同步服务
-
-从 v2.2.0 起，我们发布了一个独立的[数据同步服务](https://github.com/lyswhut/lx-music-sync-server#readme)。如果你有服务器，可以将其部署到服务器上作为私人多端同步服务使用，详情看该项目说明。
-
-### 开放 API 支持
-
-从 v2.7.0 起支持开放 API 服务。启用该功能后，将会在本地启动一个 HTTP 服务，提供播放器相关的接口供第三方软件调用，详情看文档「[开放 API 服务](https://lyswhut.github.io/lx-music-doc/desktop/open-api)」部分。
-
-### 数据存储目录
-
-默认情况下，软件的数据存储在：
-
-- Linux：`$XDG_CONFIG_HOME/lx-music-desktop` 或 `~/.config/lx-music-desktop`
-- macOS：`~/Library/Application Support/lx-music-desktop`
-- Windows：`%APPDATA%/lx-music-desktop`
-
-在 Windows 平台上，若程序文件夹中存在 `portable` 文件夹，则自动使用此文件夹作为数据存储文件夹（适用于 v1.17.0 及以上版本）。
-
-## 用户界面
-
-<p><img width="100%" src="./doc/images/app.png" alt="lx-music desktop UI"></p>
-
-## 贡献代码
-
-本项目欢迎 PR，但为了 PR 能顺利合并，需要注意以下几点：
-
-- 对于添加新功能的 PR，建议在提交 PR 前先创建 Issue 进行说明，以确认该功能是否确实需要。
-- 对于修复 bug 的 PR，请提供修复前后的说明及重现方式。
-- 对于其他类型的 PR，则适当附上说明。
-
-贡献代码步骤：
-
-1. 参照[源码使用方法](https://lyswhut.github.io/lx-music-doc/desktop/use-source-code)设置开发环境；
-2. 克隆本仓库代码并切换至 `dev` 分支进行开发；
-3. 提交 PR 至 `dev` 分支。
-
-## 源码使用方法
-
-请参阅：<https://lyswhut.github.io/lx-music-doc/desktop/use-source-code>
-
-## 项目协议
-
-本项目基于 [Apache License 2.0](https://github.com/lyswhut/lx-music-desktop/blob/master/LICENSE) 许可证发行，以下协议是对于 Apache License 2.0 的补充，如有冲突，以以下协议为准。
+**Melo 是非官方移植项目，与 LX Music Desktop 官方无关。** 本项目不内置任何第三方音源脚本或 API Key；自定义源由用户自行导入，仅供学习与个人使用，请遵守当地法律及各音乐平台的服务条款。
 
 ---
 
-*词语约定：本协议中的“本项目”指 LX Music（洛雪音乐助手）桌面版项目；“使用者”指签署本协议的使用者；“官方音乐平台”指对本项目内置的包括酷我、酷狗、咪咕等音乐源的官方平台统称；“版权数据”指包括但不限于图像、音频、名字等在内的他人拥有所属版权的数据。*
+## 目录
 
-### 一、数据来源
+- [特性](#特性)
+- [截图](#截图)
+- [系统要求](#系统要求)
+- [快速开始](#快速开始)
+- [功能说明](#功能说明)
+- [项目架构](#项目架构)
+- [数据兼容](#数据兼容)
+- [自定义源兼容](#自定义源兼容)
+- [开发](#开发)
+- [已知限制](#已知限制)
+- [许可证与致谢](#许可证与致谢)
 
-1.1 本项目的各官方平台在线数据来源原理是从其公开服务器中拉取数据（与未登录状态在官方平台 APP 获取的数据相同），经过对数据简单地筛选与合并后进行展示，因此本项目不对数据的合法性、准确性负责。
+## 特性
 
-1.2 本项目本身没有获取某个音频数据的能力，本项目使用的在线音频数据来源来自软件设置内“自定义源”设置所选择的“源”返回的在线链接。例如播放某首歌，本项目所做的只是将希望播放的歌曲名、艺术家等信息传递给“源”，若“源”返回了一个链接，则本项目将认为这就是该歌曲的音频数据而进行使用，至于这是不是正确的音频数据本项目无法校验其准确性，所以使用本项目的过程中可能会出现希望播放的音频与实际播放的音频不对应或者无法播放的问题。
+- **纯原生**：SwiftUI + AppKit，无 Electron、无 WKWebView、无第三方 Swift 依赖；仅支持 macOS 14+。
+- **直接复用落雪自定义源**：内置 JavaScriptCore 运行时，按原版 `preload.js` 语义注入 `lx` API；用户像原版一样导入 `.js` 源即可，不重写、不内置源脚本。
+- **数据零迁移**：直接读写原版 `LxDatas`（SQLite 原 DDL、`config_v2.json`、`user_api.json`、`theme.json`、`hot_key.json`、`data.json`），可与 LX Music Desktop 共用同一数据目录。
+- **完整播放能力**：AVPlayer 流播放 + 音效引擎（10 段 EQ、变速变调、真实 IR 卷积混响、3D 环绕、音频可视化）、播放队列/模式、定时暂停、播放进度记忆、错误自动切歌。
+- **元数据与曲库**：酷我/酷狗/QQ 音乐/网易云/咪咕 五平台搜索、热搜、榜单、歌单广场/详情、歌词、评论；用户列表 CRUD、导入导出、排序、在线列表更新、不喜欢歌曲规则。
+- **下载与本地音乐**：断点续传/重试、并发队列、MP3/FLAC 标签与封面写入、`.lrc` 歌词文件（UTF-8/GBK）、下载历史；本地音乐扫描导入、封面提取。
+- **外观与歌词**：15 套内置主题 + 主题编辑器、明暗自适应；桌面歌词窗口（逐字/翻译/罗马音、样式与快捷键）、歌词偏移、本地歌词关联。
+- **系统集成**：全局快捷键、媒体键与 Now Playing、`lxmusic://` Scheme URL、菜单栏常驻、窗口状态记忆、音频输出设备选择、开机自启。
+- **开放 API**：兼容原版 LX 开放 API 协议（本机/局域网、SSE 状态订阅），并扩展自定义 token 接口。
+- **备份恢复**：兼容原版 `.lxmc`（gzip JSON）全部数据/列表/设置导入导出。
 
-1.3 本项目的非官方平台数据（例如“我的列表”内列表）来自使用者本地系统或者使用者连接的同步服务，本项目不对这些数据的合法性、准确性负责。
+## 截图
 
-### 二、版权数据
+| 主界面 | 搜索 |
+| --- | --- |
+| ![主界面](docs/screenshots/main-playing.png) | ![搜索](docs/screenshots/search-real.png) |
 
-2.1 使用本项目的过程中可能会产生版权数据。对于这些版权数据，本项目不拥有它们的所有权。为了避免侵权，使用者务必在 **24 小时内** 清除使用本项目的过程中所产生的版权数据。
+| 播放详情（逐字歌词） | 桌面歌词 |
+| --- | --- |
+| ![逐字歌词](docs/screenshots/lyric-karaoke.png) | ![桌面歌词](docs/screenshots/desktop-lyric-styled.png) |
 
-### 三、音乐平台别名
+| 设置 | 主题编辑器 |
+| --- | --- |
+| ![设置](docs/screenshots/settings.png) | ![主题编辑器](docs/screenshots/theme-editor.png) |
 
-3.1 本项目内的官方音乐平台别名为本项目内对官方音乐平台的一个称呼，不包含恶意。如果官方音乐平台觉得不妥，可联系本项目更改或移除。
+| 音效（EQ/卷积混响/3D） | 音频可视化 |
+| --- | --- |
+| ![音效](docs/screenshots/effects-playing.png) | ![音频可视化](docs/screenshots/audio-visualization.png) |
 
-### 四、资源使用
+| 下载管理 | 在线列表更新 |
+| --- | --- |
+| ![下载](docs/screenshots/download-page.png) | ![列表更新](docs/screenshots/list-update.png) |
 
-4.1 本项目内使用的部分包括但不限于字体、图片等资源来源于互联网。如果出现侵权可联系本项目移除。
+更多截图见 [`docs/screenshots/`](docs/screenshots/)。
 
-### 五、免责声明
+## 系统要求
 
-5.1 由于使用本项目产生的包括由于本协议或由于使用或无法使用本项目而引起的任何性质的任何直接、间接、特殊、偶然或结果性损害（包括但不限于因商誉损失、停工、计算机故障或故障引起的损害赔偿，或任何及所有其他商业损害或损失）由使用者负责。
+| 项 | 要求 |
+| --- | --- |
+| 系统 | macOS 14.0+（Sonoma 及以上） |
+| 构建工具 | Xcode 26+ / Swift 6.4（SwiftPM 工程，无第三方 Swift 依赖） |
+| 可选 | Node.js 18+（仅开发期重新生成内置元数据 bundle 时需要） |
+| 硬件 | Apple Silicon / Intel Mac |
 
-### 六、使用限制
+## 快速开始
 
-6.1 本项目完全免费，且开源发布于 GitHub 面向全世界人用作对技术的学习交流。本项目不对项目内的技术可能存在违反当地法律法规的行为作保证。
+### 构建并运行
 
-6.2 **禁止在违反当地法律法规的情况下使用本项目。** 对于使用者在明知或不知当地法律法规不允许的情况下使用本项目所造成的任何违法违规行为由使用者承担，本项目不承担由此造成的任何直接、间接、特殊、偶然或结果性责任。
+```bash
+git clone https://github.com/ion-lgb/Melo.git
+cd Melo
+./Scripts/build-app.sh debug --run     # 构建并启动 build/Melo.app
+# 或
+./Scripts/build-app.sh release --run   # release 构建
+```
 
-### 七、版权保护
+构建产物：`build/Melo.app`。也可直接 `open build/Melo.app`。当前为 ad-hoc 签名（未公证），首次打开若被 Gatekeeper 拦截，请在 **系统设置 → 隐私与安全性** 中选择「仍要打开」。
 
-7.1 音乐平台不易，请尊重版权，支持正版。
+开发期直接运行（不含 `.app` 包）：
 
-### 八、非商业性质
+```bash
+MELO_RESOURCES="$PWD/Resources" swift run Melo
+```
 
-8.1 本项目仅用于对技术可行性的探索及研究，不接受任何商业（包括但不限于广告等）合作及捐赠。
+### 首次使用
 
-### 九、接受协议
+1. **数据目录**：默认读写原版路径 `~/Library/Application Support/lx-music-desktop/LxDatas/`。首次使用建议先备份该目录；**不要同时运行原版 LX Music**（SQLite 单写者）。
+   使用其他数据目录：
+   ```bash
+   MELO_DATA_DIR="/path/to/userData" build/Melo.app/Contents/MacOS/Melo
+   ```
+2. **导入自定义源**：设置 → 自定义源 →「导入源文件…」或「从链接导入…」，导入后自动激活。
+3. **播放**：搜索/榜单/歌单中双击歌曲；没有可用源时播放会提示先导入自定义源。
 
-9.1 若你使用了本项目，即代表你接受本协议。
+### 运行测试
 
----
+```bash
+swift test                                        # 292 项单元/集成测试
+swift run MeloSmoke --metadata-only --online      # 五平台在线元数据冒烟（需联网）
+bash Scripts/smoke-test.sh                        # 本地 demo server 端到端冒烟
+```
 
-若对此有疑问请 mail to: lyswhut+qq.com (请将 `+` 替换为 `@`)
+## 功能说明
+
+- **播放与音效**：播放/暂停、上一首/下一首、随机/列表/单曲/顺序模式、播放队列管理、倍速、音量、定时暂停、启动自动播放、记住进度、播放错误自动切歌。
+- **音效引擎**：10 段均衡器、变速变调、13 组真实录音 IR 卷积混响、3D 环绕声像、输出设备选择；仅在使用音效/可视化时启用（普通播放走 AVPlayer 流式）。
+- **歌词**：LRC 解析、逐字歌词、翻译/罗马音、桌面歌词（置顶/锁定/样式/偏移/暂停隐藏）、歌词手动偏移、本地 `.lrc` 关联。
+- **下载**：并发下载、断点续传、失败重试、标签/封面写入、歌词文件保存（UTF-8 BOM / GBK）、下载历史与任务恢复。
+- **列表**：试听/收藏/临时/用户列表、多选与拖拽排序、复制/排序/重命名、文本与 CSV 导出、在线源歌单同步、`.lxmc` 备份恢复、不喜欢歌曲过滤。
+- **主题与语言**：读取原版 `themes.json` + 用户主题、主题编辑器、背景图/模糊/透明度；原版四语言资源（中/繁/英/韩）与运行时切换。
+- **系统**：全局快捷键、媒体键、Now Playing、菜单栏、`lxmusic://`、开机自启、窗口状态记忆。
+- **开放 API**：兼容原版 LX 开放 API（状态/播放控制/歌词/SSE 订阅），支持局域网绑定与 Token 鉴权。
+
+## 项目架构
+
+SwiftPM 多 target 工程（无外部依赖）：
+
+| Target | 职责 |
+| --- | --- |
+| `MeloCore` | 模型、协议、设置、主题、i18n、歌词解析、`AppModel`（UI 唯一入口） |
+| `MeloData` | SQLite（兼容原版 DDL）、下载引擎、标签写入、本地音乐扫描、缓存 |
+| `MeloAudio` | AVPlayer 播放、音效引擎（EQ/卷积/3D/可视化）、输出设备、Now Playing |
+| `MeloJS` | JavaScriptCore 自定义源运行时、musicSdk 元数据 bundle、HTTP、开放 API 服务 |
+| `MeloUI` | SwiftUI 视图（仅依赖 MeloCore） |
+| `MeloApp` | `@main` 入口、服务装配、AppKit 窗口/菜单/Scheme |
+| `MeloSmoke` | 端到端冒烟 CLI |
+
+```
+.
+├── Package.swift
+├── Sources/           # 7 个 target（见上表）
+├── Resources/         # 主题/语言/图片/SoundEffect/musicSdk.bundle.js/default-settings.json
+├── Tests/             # XCTest（Core/Data/Audio/JS）
+├── TestAssets/        # 仅开发测试：示例自定义源与测试音频元数据（不进 App bundle）
+├── Scripts/           # build-app.sh / smoke-test.sh / make-test-data.py / demo-server.mjs / fetch-upstream-source.sh
+├── tools/             # musicSdk-bundle 生成工具（开发期）
+├── docs/              # 结项报告与截图
+├── Info.plist
+└── ARCHITECTURE.md    # 架构与设计决策
+```
+
+依赖方向：`MeloApp → {MeloCore, MeloData, MeloAudio, MeloJS, MeloUI}`，`MeloUI → MeloCore`，其余模块 → `MeloCore`。
+
+## 数据兼容
+
+- 数据目录：`~/Library/Application Support/lx-music-desktop/LxDatas/`（`MELO_DATA_DIR` 可覆盖）。
+- `lx.data.db`：原版 9 表 + 3 索引 DDL、WAL 模式、`db_info.version=2`；不迁移、不重建。
+- `config_v2.json`：`{ "setting": { ... } }`，保留未知顶层键。
+- `user_api.json`：`{ "userApis": [{ "script": "gz_<base64(zlib)>", ... }] }`，与原版互通。
+- `theme.json`、`hot_key.json`、`data.json`（`playInfo` / `listUpdateInfo`）、`lyric`（`raw`/`edited`）、`download_list`、`dislike_list` 均按原版格式读写。
+- 备份文件：原版 `.lxmc`（gzip JSON：`allData_v2` / `playList_v2` / `setting_v2`）。
+
+## 自定义源兼容
+
+- 自定义源脚本在独立 JavaScriptCore 中运行；`lx.on`/`lx.send`/`lx.request`/`lx.utils`（buffer/crypto/zlib）/`lx.EVENT_NAMES`/`lx.env`/`lx.version` 等按原版 `user_api/renderer/preload.js` 语义实现。
+- 兼容原版 `user_api.json` 存储与导入流程；旧版 musicInfo 结构会自动转换。
+- **本仓库不包含、不内置任何自定义源脚本或 API Key**；测试用源位于 `TestAssets/`（仅本地 demo，不会被 App 打包运行）。自定义源版权与合规责任归其作者/使用者。
+
+## 开发
+
+```bash
+# 编译
+swift build
+
+# 单元/集成测试
+swift test
+
+# App 打包（ad-hoc 签名）
+./Scripts/build-app.sh debug
+
+# 本地 test server + 生成的 LxDatas 测试数据 + MeloSmoke
+bash Scripts/smoke-test.sh
+```
+
+### 重新生成内置元数据 bundle（可选）
+
+`Resources/js/musicSdk.bundle.js` 由上游 LX Music Desktop v2.12.6 的 `musicSdk` 模块（Apache-2.0）在开发期打包生成，App 运行不依赖 Node：
+
+```bash
+bash Scripts/fetch-upstream-source.sh     # 下载上游源码到 tools/musicSdk-bundle/upstream/
+cd tools/musicSdk-bundle
+npm install
+npm run build                             # 产物写回 Resources/js/musicSdk.bundle.js
+```
+
+上游源码与 `node_modules/` 均不提交（见 `tools/musicSdk-bundle/README.md`）。
+
+### 调试
+
+常用环境变量：`MELO_DATA_DIR`（数据目录）、`MELO_RESOURCES`（资源目录）、`MELO_VERBOSE=1`（详细日志）、`MELO_ROUTE=settings`（启动页）等；完整列表见 [STATUS.md](STATUS.md#开发期环境变量)。
+
+架构细节与设计决策见 [ARCHITECTURE.md](ARCHITECTURE.md)；目标达成情况与验证记录见 [docs/PORT-COMPLETION.md](docs/PORT-COMPLETION.md)。
+
+## 已知限制
+
+- 数据同步（客户端/服务端）尚未实现。
+- 无 Developer ID，当前为 ad-hoc 签名，未公证、未接入自动更新。
+- i18n 架构与资源已兼容、核心静态文案已多语言，部分自定义/插值文案仍为中文。
+- 音频可视化仅音效引擎播放时可用；开启可视化会强制走音效引擎（远程歌曲首次需缓存）。
+- 网络代理仅覆盖自定义源/内置元数据的 HTTP(S) 请求，AVPlayer 媒体流不受影响；不支持 SOCKS/PAC。
+- 音效卷积混响为离线渲染（切换 IR 有一次处理延迟）；3D 环绕为立体声 pan（非 HRTF）。
+- 评论为只读（原版接口无点赞/回复）；AVFoundation 无法解码的格式（如 APE）不支持。
+- 仅支持 macOS 14+；Windows/Linux 不再维护。
+
+## 许可证与致谢
+
+本项目以 [Apache License 2.0](LICENSE) 发布。
+
+- 感谢 **lyswhut** 及 **LX Music Desktop** 贡献者：<https://github.com/lyswhut/lx-music-desktop>。
+- 本移植复用上游的数据格式、主题、语言包、音效资源与自定义源生态；原项目版权归其作者所有，详见 [NOTICE](NOTICE)。
+- `Resources/js/musicSdk.bundle.js` 由上游源码在开发期生成；仓库不包含上游源码。
+- 自定义源脚本由各自作者提供，本项目不提供、不内置任何音源。
+
+## 免责声明
+
+本项目为个人学习与技术研究用途的非官方移植，不提供任何音乐内容或音源。使用者应自行确保其行为符合当地法律法规及各音乐平台的服务条款；因使用第三方自定义源产生的任何问题与责任由使用者自行承担。
