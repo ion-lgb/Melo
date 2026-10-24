@@ -22,7 +22,7 @@ public struct RootWindowView: View {
         GeometryReader { proxy in
             Group {
                 if app.isBootstrapped {
-                    mainWindow
+                    mainWindow(topInset: proxy.safeAreaInsets.top)
                 } else {
                     MeloLoadingView(app: app)
                 }
@@ -49,9 +49,9 @@ public struct RootWindowView: View {
 
     // MARK: 主窗口
 
-    private var mainWindow: some View {
+    private func mainWindow(topInset: CGFloat) -> some View {
         NavigationSplitView {
-            SidebarView(app: app)
+            SidebarView(app: app, topInset: topInset)
                 .navigationSplitViewColumnWidth(min: 200, ideal: MeloMetrics.sidebarWidth, max: 320)
         } detail: {
             detailContent

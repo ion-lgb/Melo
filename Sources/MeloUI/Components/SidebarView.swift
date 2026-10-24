@@ -7,6 +7,7 @@ import MeloCore
 /// Apple Music 式侧边栏：毛玻璃材质、分组小标题、圆角强调色选中行。
 struct SidebarView: View {
     let app: AppModel
+    var topInset: CGFloat = 0
 
     @Environment(\.meloColors) private var colors
     @State private var newListName = ""
@@ -40,10 +41,13 @@ struct SidebarView: View {
                     }
                 }
                 .padding(.horizontal, 8)
-                .padding(.top, 6)
+                .padding(.top, topInset + 6)
                 .padding(.bottom, 12)
             }
             .scrollContentBackground(.hidden)
+            // 侧边栏列自身已让出工具栏安全区；若 ScrollView 再让一次，
+            // 内容会整体下移一个工具栏高度，而命中区留在原位（悬停/点击错位）。
+            .ignoresSafeArea(.container, edges: .top)
 
             bottomBar
         }
