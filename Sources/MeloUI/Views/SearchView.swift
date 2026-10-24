@@ -66,6 +66,13 @@ struct SearchView: View {
             .labelsHidden()
             .frame(width: 132)
 
+            Divider()
+                .frame(height: 18)
+
+            Text("音源")
+                .font(MeloFont.caption)
+                .foregroundStyle(colors.fontTertiary)
+
             SourceChipBar(app: app, selected: app.searchSource) { source in
                 Task { await app.setSearchSource(source) }
             }
@@ -125,12 +132,14 @@ struct SearchView: View {
                     }
                 }
 
-                EmptyStateView(
-                    systemImage: "sparkle.magnifyingglass",
-                    title: "输入关键词开始搜索",
-                    message: "支持歌曲 / 歌单搜索、多音源聚合，搜索历史保存在本地设置中。"
-                )
-                .frame(height: 220)
+                if app.searchHistory.isEmpty && app.hotSearchWords.isEmpty {
+                    EmptyStateView(
+                        systemImage: "sparkle.magnifyingglass",
+                        title: "输入关键词开始搜索",
+                        message: "支持歌曲 / 歌单搜索、多音源聚合，搜索历史保存在本地设置中。"
+                    )
+                    .frame(height: 220)
+                }
             }
             .padding(MeloMetrics.pageInset)
         }

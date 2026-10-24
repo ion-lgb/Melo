@@ -188,12 +188,12 @@ public final class ThemeManager {
         self.settings = settings
         self.dataDirectory = dataDirectory
         loadThemes()
-        self.systemIsDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        self.systemIsDark = Self.detectSystemIsDark()
         refreshCurrent()
         appearanceObservation = NSApp?.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
                 guard let self else { return }
-                let isDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                let isDark = Self.detectSystemIsDark()
                 if isDark != self.systemIsDark {
                     self.systemIsDark = isDark
                     self.refreshCurrent()
@@ -364,6 +364,12 @@ public final class ThemeManager {
     }
 
     // MARK: - 颜色令牌
+
+    /// 强制暗色仅用于开发期截图走查（`MELO_FORCE_DARK=1`）。
+    private static func detectSystemIsDark() -> Bool {
+        if ProcessInfo.processInfo.environment["MELO_FORCE_DARK"] == "1" { return true }
+        return NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
 
     /// 外观固定为 Apple Music 配色，只随系统明暗切换；`current` 主题仅用于数据兼容与主题编辑器。
     private func buildColors() -> AppColors {

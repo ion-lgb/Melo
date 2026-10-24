@@ -171,12 +171,6 @@ struct SettingsView: View {
         HStack(alignment: .top) {
             PageTitle(Localizer.tr("setting"), subtitle: "外观 / 播放 / 自定义源 / 数据 / 关于 · 设置写入原版兼容的 config_v2.json")
             Spacer()
-            Button {
-                app.route = .test
-            } label: {
-                Label("自定义源测试", systemImage: "testtube.2")
-            }
-            .buttonStyle(.meloSecondary)
         }
     }
 

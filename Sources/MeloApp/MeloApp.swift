@@ -108,7 +108,7 @@ struct MainWindowHost: View {
     var body: some View {
         RootWindowView(app: model)
             .frame(minWidth: 1000, minHeight: 620)
-            .background(MainWindowConfigurator())
+            .background(MainWindowConfigurator(isImmersive: model.isShowingPlayDetail))
             .onReceive(NotificationCenter.default.publisher(for: .meloToggleDesktopLyric)) { _ in
                 toggleDesktopLyric()
             }

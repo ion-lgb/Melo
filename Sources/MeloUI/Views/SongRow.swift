@@ -128,6 +128,7 @@ struct SongRow: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
+                .tint(colors.fontTertiary)
                 .fixedSize()
                 .help("更多操作")
             }

@@ -33,6 +33,16 @@ public struct RootWindowView: View {
         .tint(app.appColors.primary)
         .preferredColorScheme(app.appColors.isDark ? .dark : .light)
         .frame(minWidth: 980, minHeight: 640)
+        // 播放详情铺满整个窗口（含侧边栏与标题栏区域），并隐藏工具栏保持沉浸感
+        .overlay {
+            if app.isShowingPlayDetail {
+                PlayDetailView(app: app)
+                    .transition(.opacity)
+                    .ignoresSafeArea()
+                    .zIndex(2)
+            }
+        }
+        .animation(.easeInOut(duration: 0.22), value: app.isShowingPlayDetail)
         .overlay(alignment: .top) { toastOverlay }
         .animation(.easeInOut(duration: 0.2), value: app.toastMessage)
     }
@@ -69,14 +79,6 @@ public struct RootWindowView: View {
                 .help("刷新")
             }
         }
-        .overlay {
-            if app.isShowingPlayDetail {
-                PlayDetailView(app: app)
-                    .transition(.opacity)
-                    .zIndex(2)
-            }
-        }
-        .animation(.easeInOut(duration: 0.22), value: app.isShowingPlayDetail)
         .onChange(of: searchText) { _, newValue in
             searchDebounce?.cancel()
             searchDebounce = Task { @MainActor in

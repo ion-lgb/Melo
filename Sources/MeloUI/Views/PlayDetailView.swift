@@ -37,6 +37,7 @@ struct PlayDetailView: View {
                             CommentsPanel(app: app,
                                           previewExpanded: previewShowComments,
                                           previewState: previewCommentsState)
+                                .frame(maxWidth: 420, alignment: .leading)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
@@ -201,6 +202,7 @@ struct PlayDetailView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
+                .tint(.white.opacity(0.6))
                 .fixedSize()
                 .help("歌词设置")
             }
@@ -242,6 +244,7 @@ struct PlayDetailView: View {
                 .padding(.vertical, 90)
                 .padding(.trailing, 12)
             }
+            .defaultScrollAnchor(.center)
             .onAppear {
                 if let index = app.currentLyricIndex {
                     proxy.scrollTo(index, anchor: .center)
@@ -502,7 +505,7 @@ struct PlayDetailView: View {
                         }
                     }
                 )
-                .controlSize(.mini)
+                .controlSize(.small)
                 .tint(.white)
                 .disabled(app.duration <= 0)
 
@@ -551,5 +554,6 @@ struct PlayDetailView: View {
                 .help(Localizer.tr("player__next"))
             }
         }
+        .frame(maxWidth: 560)
     }
 }

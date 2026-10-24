@@ -145,6 +145,7 @@ struct MeloCapsuleButtonStyle: ButtonStyle {
         let configuration: Configuration
         let prominent: Bool
         @Environment(\.meloColors) private var colors
+        @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
@@ -164,6 +165,7 @@ struct MeloCapsuleButtonStyle: ButtonStyle {
                 )
                 .scaleEffect(configuration.isPressed ? 0.97 : 1)
                 .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .opacity(isEnabled ? 1 : 0.45)
         }
     }
 }

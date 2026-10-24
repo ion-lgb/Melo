@@ -196,6 +196,8 @@ struct LyricWindowConfigurator: NSViewRepresentable {
 
 /// 主窗口外观：透明标题栏 + 统一工具栏，窗口本身透明以便侧边栏毛玻璃透出桌面。
 struct MainWindowConfigurator: NSViewRepresentable {
+    var isImmersive: Bool = false
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async { configure(view.window) }
@@ -212,6 +214,10 @@ struct MainWindowConfigurator: NSViewRepresentable {
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
+        // 播放详情铺满窗口时隐藏工具栏，退出后恢复
+        if let toolbar = window.toolbar, toolbar.isVisible == isImmersive {
+            toolbar.isVisible = !isImmersive
+        }
         // Apple Music 侧边栏透出桌面：窗口不透明关闭，内容区自行铺纯色底
         window.isOpaque = false
         window.backgroundColor = .clear

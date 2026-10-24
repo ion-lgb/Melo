@@ -146,6 +146,8 @@ struct MyListView: View {
                 .background(colors.chipFill, in: Capsule())
             }
             .menuStyle(.borderlessButton)
+            .menuIndicator(.visible)
+            .tint(colors.font)
             .fixedSize()
             .disabled(app.isImportingLocalMusic)
             .help("导入本地音乐文件或文件夹（也可直接拖入列表）")
@@ -171,6 +173,7 @@ struct MyListView: View {
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
+            .tint(colors.fontSecondary)
             .fixedSize()
             .help("更多：导出 / 复制列表")
 

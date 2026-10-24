@@ -80,6 +80,7 @@ struct SongListView: View {
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
+            .tint(colors.font)
             .fixedSize()
 
             Button {

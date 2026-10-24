@@ -41,7 +41,7 @@ struct DownloadView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            if !app.isDownloadEnabled {
+            if !app.isDownloadEnabled && !tasks.isEmpty {
                 disabledBanner
             }
             ScrollView {
@@ -71,7 +71,7 @@ struct DownloadView: View {
                 app.clearDownloadHistory()
             }
         } message: {
-            Text("将从原版 download_list 下载历史中删除所有已完成记录（不删除本地文件）。该操作不影响当前下载任务。")
+            Text("将清空所有已完成下载记录（不删除本地文件），不影响当前下载任务。")
         }
     }
 
@@ -268,7 +268,7 @@ struct DownloadView: View {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(colors.primary)
-                        Text("历史记录（原版 download_list）")
+                        Text("下载历史")
                             .font(MeloFont.cardTitle)
                             .foregroundStyle(colors.font)
                         Text("\(history.count)")
@@ -293,7 +293,7 @@ struct DownloadView: View {
                         Label("清空已完成记录", systemImage: "trash")
                     }
                     .buttonStyle(.meloSecondary)
-                    .help("从 download_list 中清空已完成记录（不删除本地文件）")
+                    .help("清空已完成记录（不删除本地文件）")
                 }
             }
             .padding(.horizontal, 4)
@@ -304,7 +304,7 @@ struct DownloadView: View {
                         Image(systemName: "tray")
                             .font(.system(size: 13))
                             .foregroundStyle(colors.fontTertiary)
-                        Text("暂无下载历史。完成下载后，记录会显示在这里（来自原版 download_list）。")
+                        Text("暂无下载记录。完成下载后会显示在这里。")
                             .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                         Spacer()

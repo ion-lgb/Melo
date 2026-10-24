@@ -181,6 +181,7 @@ struct SoundEffectPanel: View {
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
+                .tint(colors.font)
                 .fixedSize()
                 .help("原版 EQ 预设")
 
@@ -344,18 +345,15 @@ struct SoundEffectPanel: View {
                 }
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    MeloChip(text: Localizer.tr("close"), isSelected: !effects.isConvolutionActive) {
-                        app.setConvolutionFileName(nil)
-                    }
-                    ForEach(app.convolutionPresets) { preset in
-                        MeloChip(text: preset.name, isSelected: preset.fileName == effects.convolutionFileName) {
-                            app.applyConvolutionPreset(preset)
-                        }
+            MeloFlow(spacing: 8) {
+                MeloChip(text: Localizer.tr("close"), isSelected: !effects.isConvolutionActive) {
+                    app.setConvolutionFileName(nil)
+                }
+                ForEach(app.convolutionPresets) { preset in
+                    MeloChip(text: preset.name, isSelected: preset.fileName == effects.convolutionFileName) {
+                        app.applyConvolutionPreset(preset)
                     }
                 }
-                .padding(.vertical, 1)
             }
 
             HStack(spacing: 10) {
