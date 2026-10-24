@@ -50,20 +50,20 @@ struct ImportSourceSheet: View {
     private var header: some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                     .fill(colors.primary.opacity(0.12))
                 Image(systemName: "link")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(colors.primary)
             }
-            .frame(width: 34, height: 34)
+            .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(Localizer.tr("user_api_import_online__title"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(colors.font)
                 Text("从链接下载 .js 源脚本，按原版 user_api.json 规则保存")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
@@ -73,8 +73,8 @@ struct ImportSourceSheet: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 24, height: 24)
-                    .background(colors.fontTertiary.opacity(0.10), in: Circle())
+                    .frame(width: 26, height: 26)
+                    .background(colors.chipFill, in: Circle())
             }
             .buttonStyle(.plain)
         }
@@ -85,34 +85,34 @@ struct ImportSourceSheet: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("源链接（http / https）")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(colors.fontSecondary)
+                .font(MeloFont.body)
+                .foregroundStyle(colors.font)
 
             TextField("https://example.com/api/script/lx?key=...", text: $urlString)
                 .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11.5, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .onSubmit(submit)
                 .disabled(app.isImportingSource)
 
             Text("从 http(s) 链接下载 .js 脚本，按原版 user_api.json 规则保存；不会内置到 App。导入成功后会自动激活该源。")
-                .font(.system(size: 10))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let errorText {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.red)
+                        .font(.system(size: 11))
+                        .foregroundStyle(colors.primary)
                         .padding(.top, 1)
                     Text(errorText)
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.red)
+                        .font(MeloFont.caption)
+                        .foregroundStyle(colors.primary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(8)
+                .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .background(colors.primaryOpacity(0.08), in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
             }
 
             if app.isImportingSource {
@@ -120,7 +120,7 @@ struct ImportSourceSheet: View {
                     ProgressView()
                         .controlSize(.small)
                     Text("正在下载并解析源脚本…")
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
                 }
             }
@@ -129,11 +129,11 @@ struct ImportSourceSheet: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Spacer()
             Button(Localizer.tr("btn_cancel")) { dismiss() }
+                .buttonStyle(.meloSecondary)
                 .keyboardShortcut(.cancelAction)
-                .controlSize(.small)
 
             Button(action: submit) {
                 HStack(spacing: 6) {
@@ -142,16 +142,15 @@ struct ImportSourceSheet: View {
                     }
                     Text(app.isImportingSource ? "导入中…" : Localizer.tr("import"))
                 }
-                .frame(minWidth: 56)
+                .frame(minWidth: 64)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
-            .controlSize(.small)
+            .buttonStyle(.meloPrimary)
             .disabled(!canSubmit)
+            .opacity(canSubmit ? 1 : 0.5)
             .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
     }
 
     private func submit() {

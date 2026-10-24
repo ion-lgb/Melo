@@ -95,30 +95,26 @@ struct MyListView: View {
 
             HStack(spacing: 7) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.system(size: 11))
+                    .font(.system(size: 13))
                     .foregroundStyle(colors.fontTertiary)
                 TextField("过滤歌曲…", text: $filterText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(MeloFont.body)
                     .frame(width: 150)
                 if !filterText.isEmpty {
                     Button {
                         filterText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 12))
                             .foregroundStyle(colors.fontTertiary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(colors.fontTertiary.opacity(0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(colors.border, lineWidth: 1)
-            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
 
             Menu {
                 Button {
@@ -139,13 +135,15 @@ struct MyListView: View {
                         ProgressView().controlSize(.mini)
                     } else {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 12))
                     }
                     Text(app.isImportingLocalMusic ? "导入中…" : Localizer.tr("import"))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(MeloFont.controlLabel)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(colors.chipFill, in: Capsule())
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
@@ -167,11 +165,12 @@ struct MyListView: View {
                 Text("导出支持文本 / CSV，可合并单文件或按列表拆分；复制为「歌名  歌手  专辑」纯文本")
             } label: {
                 Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(colors.fontSecondary)
                     .frame(width: 24, height: 22)
             }
             .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .fixedSize()
             .help("更多：导出 / 复制列表")
 
@@ -180,10 +179,8 @@ struct MyListView: View {
                 app.playList(filteredMusics, startAt: 0)
             } label: {
                 Label("播放全部", systemImage: "play.fill")
-                    .font(.system(size: 11, weight: .medium))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
+            .buttonStyle(.meloPrimary)
             .disabled(filteredMusics.isEmpty)
             .help("从第一首开始播放当前列表（含过滤结果）")
 
@@ -192,7 +189,7 @@ struct MyListView: View {
                 app.refreshLibrary()
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 16)
         .padding(.bottom, 10)
     }
@@ -219,9 +216,9 @@ struct MyListView: View {
     // MARK: 批量操作栏
 
     private var batchBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Text("已选择 \(selectedMusics.count) 首")
-                .font(.system(size: 11, weight: .semibold))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.primary)
 
             batchButton(Localizer.tr("list__play"), systemImage: "play.fill") {
@@ -247,25 +244,28 @@ struct MyListView: View {
             Spacer()
             Button("取消选择") { clearSelection() }
                 .buttonStyle(.plain)
-                .font(.system(size: 10.5))
+                .font(MeloFont.secondary)
                 .foregroundStyle(colors.fontTertiary)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 7)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 9)
         .background(colors.primaryOpacity(0.07))
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(colors.primaryOpacity(0.18)).frame(height: 1)
-        }
     }
 
     private func batchButton(_ title: String, systemImage: String, destructive: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 10.5))
-                .foregroundStyle(destructive ? Color.red : colors.fontSecondary)
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 11))
+                Text(title)
+            }
+            .font(MeloFont.controlLabel)
+            .foregroundStyle(destructive ? colors.primary : colors.font)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(colors.chipFill, in: Capsule())
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.plain)
     }
 
     // MARK: 内容
@@ -316,47 +316,45 @@ struct MyListView: View {
     private var emptyListState: some View {
         VStack(spacing: 14) {
             Image(systemName: "music.note.list")
-                .font(.system(size: 38, weight: .light))
+                .font(.system(size: 40, weight: .light))
                 .foregroundStyle(colors.fontTertiary.opacity(0.55))
             Text("「\(listTitle)」还没有歌曲")
-                .font(.system(size: 15, weight: .semibold))
+                .font(MeloFont.sectionTitle)
                 .foregroundStyle(colors.font)
             Text("导入本地音乐，或到搜索页找歌、进入歌单详情播放，再通过右键菜单添加到该列表。")
-                .font(.system(size: 11))
+                .font(MeloFont.secondary)
                 .foregroundStyle(colors.fontSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 420)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Button {
                     importLocalFiles()
                 } label: {
                     Label("导入本地音乐", systemImage: "square.and.arrow.down")
-                        .font(.system(size: 11.5, weight: .medium))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(colors.primary)
+                .buttonStyle(.meloPrimary)
                 .disabled(app.isImportingLocalMusic)
 
                 Button("导入文件夹") { importLocalFolder() }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                     .disabled(app.isImportingLocalMusic)
 
                 Button("去搜索") { app.route = .search }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
             }
 
             if app.isImportingLocalMusic {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     Text("正在扫描并导入本地音乐…")
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontSecondary)
                 }
             } else {
                 Text("也可以直接把音频文件或文件夹拖到列表区域")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
         }
@@ -366,24 +364,24 @@ struct MyListView: View {
 
     private var dropOverlay: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
                 .fill(colors.mainBackground.opacity(colors.isDark ? 0.94 : 0.96))
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
                 .fill(colors.primary.opacity(0.07))
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
                 .strokeBorder(
                     colors.primary,
                     style: StrokeStyle(lineWidth: 2, dash: [8, 5])
                 )
             VStack(spacing: 10) {
                 Image(systemName: "square.and.arrow.down.on.square")
-                    .font(.system(size: 30, weight: .light))
+                    .font(.system(size: 32, weight: .light))
                     .foregroundStyle(colors.primary)
                 Text("松开导入本地音乐")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("音频文件或文件夹将加入「\(listTitle)」（自动递归扫描并去重）")
-                    .font(.system(size: 11))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
             }
         }

@@ -63,102 +63,90 @@ struct SoundEffectPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(colors.border)
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: MeloMetrics.gridSpacing) {
                     eqSection
                     pitchSection
                     convolutionSection
                     pannerSection
                 }
-                .padding(18)
+                .padding(MeloMetrics.pageInset)
             }
             Divider().overlay(colors.border)
             footer
         }
         .frame(width: 800, height: 880)
-        .background(colors.mainBackground)
+        .presentationBackground(.regularMaterial)
     }
 
     // MARK: 头部
 
     private var header: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(colors.primary.opacity(0.12))
+                RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
+                    .fill(colors.primaryOpacity(0.12))
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(colors.primary)
             }
-            .frame(width: 34, height: 34)
+            .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("音效")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("均衡器 / 变速变调 · 会写入原版 player.soundEffect.* 设置并立即生效")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
             }
 
             Spacer()
 
             statusBadge
 
-            Button {
+            MeloCircleIconButton(systemName: "xmark", help: Localizer.tr("close"), size: 12, frameSize: 28) {
                 dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 24, height: 24)
-                    .background(colors.fontTertiary.opacity(0.10), in: Circle())
             }
-            .buttonStyle(.plain)
-            .help(Localizer.tr("close"))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 14)
     }
 
     private var statusBadge: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             Circle()
                 .fill(soundEffectActive ? colors.primary : colors.fontTertiary)
-                .frame(width: 6, height: 6)
+                .frame(width: 7, height: 7)
             Text(soundEffectActive ? "音效引擎已启用" : "当前无音效 · 普通引擎")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(soundEffectActive ? colors.primary : colors.fontTertiary)
+                .font(MeloFont.controlLabel)
+                .foregroundStyle(soundEffectActive ? colors.primary : colors.fontSecondary)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            (soundEffectActive ? colors.primary : colors.fontTertiary).opacity(0.10),
-            in: Capsule()
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(colors.chipFill, in: Capsule())
     }
 
     // MARK: 均衡器
 
     private var eqSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(colors.primary)
                 Text(Localizer.tr("player__sound_effect_biquad_filter"))
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("10 段 · 单位 dB")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                 Text("±15")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(MeloFont.microCaption.monospacedDigit())
                     .foregroundStyle(colors.fontTertiary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(colors.chipFill, in: Capsule())
 
                 Spacer()
 
@@ -177,19 +165,19 @@ struct SoundEffectPanel: View {
                     Divider()
                     Button("重置（全平）") { app.resetEQ() }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "waveform")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                         Text(presetName)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(MeloFont.controlLabel)
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .semibold))
+                            .font(.system(size: 9, weight: .semibold))
                     }
-                    .foregroundStyle(colors.fontSecondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                    .foregroundStyle(colors.font)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .background(colors.chipFill, in: Capsule())
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
@@ -197,8 +185,7 @@ struct SoundEffectPanel: View {
                 .help("原版 EQ 预设")
 
                 Button(Localizer.tr("lyric_menu__size_reset")) { app.resetEQ() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     .disabled(!effects.isEQActive)
             }
 
@@ -208,55 +195,55 @@ struct SoundEffectPanel: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.top, 2)
+            .padding(.top, 4)
 
             if !effects.isEQActive {
                 Text("均衡器当前全平；拖动滑块或选择预设后进入音效播放引擎。")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
             }
         }
-        .padding(14)
+        .padding(MeloMetrics.pageInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
     }
 
     private func bandColumn(_ index: Int) -> some View {
         let gain = bands.indices.contains(index) ? bands[index] : 0
-        return VStack(spacing: 6) {
+        return VStack(spacing: 7) {
             VerticalEQSlider(value: gain) { newValue in
                 app.setEQBand(index, gain: newValue)
             }
             .frame(height: 170)
 
             Text(SettingKeys.eqFrequencyLabels[safe: index] ?? "")
-                .font(.system(size: 9.5, weight: .medium))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.fontSecondary)
 
             Text(gain == 0 ? "0" : String(format: "%+.0f", gain))
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .font(MeloFont.caption.weight(.semibold).monospacedDigit())
                 .foregroundStyle(gain == 0 ? colors.fontTertiary : colors.primary)
-                .frame(height: 12)
+                .frame(height: 14)
         }
     }
 
     // MARK: 变速变调
 
     private var pitchSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "tuningfork")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(colors.primary)
                 Text("变速变调")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("pitch shifter · 0.5x – 1.5x")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                 Spacer()
                 Button(Localizer.tr("lyric_menu__size_reset")) { app.setPitchShifterRate(1) }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     .disabled(abs(shifterRate - 1) < 0.005)
             }
 
@@ -274,24 +261,25 @@ struct SoundEffectPanel: View {
 
                 HStack(spacing: 8) {
                     Text(String(format: "%.2fx", shifterRate))
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .font(MeloFont.controlLabel.monospacedDigit())
                         .foregroundStyle(colors.font)
                     Text(semitoneText)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(MeloFont.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(abs(semitones) < 0.05 ? colors.fontTertiary : colors.primary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
                         .background(
                             (colors.primary).opacity(abs(semitones) < 0.05 ? 0 : 0.10),
                             in: Capsule()
                         )
                 }
-                .frame(width: 150, alignment: .leading)
+                .frame(width: 170, alignment: .leading)
             }
 
             whySeparateNote
         }
-        .padding(14)
+        .padding(MeloMetrics.pageInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
     }
 
@@ -302,17 +290,17 @@ struct SoundEffectPanel: View {
 
     /// 播放条倍速（player.playbackRate）与音效层升降调（pitch shifter）是两套机制
     private var whySeparateNote: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(colors.fontTertiary)
                 Text("这是音效层的升降调（pitch shifter），与播放条上的「倍速」是两套机制")
-                    .font(.system(size: 10))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
             }
             Text("倍速只改变播放速度并保持音调；升降调通过实时 DSP 处理改变音高。升降调会增加 CPU 占用，CPU 不足时可能出现声音异常，可暂停片刻等待处理完成。")
-                .font(.system(size: 9.5))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -335,35 +323,34 @@ struct SoundEffectPanel: View {
     }
 
     private var convolutionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "waveform.badge.mic")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(colors.primary)
                 Text("环境混响")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("卷积混响 · 内置脉冲响应")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                 if effects.isConvolutionActive, let preset = convolutionPreset {
                     MeloBadge(preset.name, color: colors.primary)
                 }
                 Spacer()
                 if effects.isConvolutionActive {
                     Button(Localizer.tr("close")) { app.setConvolutionFileName(nil) }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.meloSecondary)
                 }
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    convolutionChip(Localizer.tr("close"), selected: !effects.isConvolutionActive) {
+                HStack(spacing: 8) {
+                    MeloChip(text: Localizer.tr("close"), isSelected: !effects.isConvolutionActive) {
                         app.setConvolutionFileName(nil)
                     }
                     ForEach(app.convolutionPresets) { preset in
-                        convolutionChip(preset.name, selected: preset.fileName == effects.convolutionFileName) {
+                        MeloChip(text: preset.name, isSelected: preset.fileName == effects.convolutionFileName) {
                             app.applyConvolutionPreset(preset)
                         }
                     }
@@ -373,9 +360,9 @@ struct SoundEffectPanel: View {
 
             HStack(spacing: 10) {
                 Text("主增益")
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 48, alignment: .leading)
+                    .frame(width: 52, alignment: .leading)
                 Slider(
                     value: Binding(
                         get: { rawMainGain },
@@ -387,14 +374,14 @@ struct SoundEffectPanel: View {
                 .tint(colors.primary)
                 .frame(width: 150)
                 Text(String(format: "%.0f%%", rawMainGain * 10))
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 46, alignment: .trailing)
+                    .font(MeloFont.caption.monospacedDigit())
+                    .foregroundStyle(colors.font)
+                    .frame(width: 48, alignment: .trailing)
 
                 Text("发送增益")
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 56, alignment: .leading)
+                    .frame(width: 60, alignment: .leading)
                 Slider(
                     value: Binding(
                         get: { rawSendGain },
@@ -406,57 +393,37 @@ struct SoundEffectPanel: View {
                 .tint(colors.primary)
                 .frame(width: 150)
                 Text(String(format: "%.0f%%", rawSendGain * 10))
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 46, alignment: .trailing)
+                    .font(MeloFont.caption.monospacedDigit())
+                    .foregroundStyle(colors.font)
+                    .frame(width: 48, alignment: .trailing)
                 Spacer(minLength: 0)
             }
             .disabled(!effects.isConvolutionActive)
             .opacity(effects.isConvolutionActive ? 1 : 0.45)
 
             Text("100% = 原始 1.0 倍增益；首次应用卷积混响需要处理音频，可能有短暂加载。")
-                .font(.system(size: 9.5))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
         }
-        .padding(14)
+        .padding(MeloMetrics.pageInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
-    }
-
-    private func convolutionChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 10, weight: selected ? .semibold : .regular))
-                .foregroundStyle(selected ? colors.primary : colors.fontSecondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .background(
-                    (selected ? colors.primary.opacity(0.12) : colors.fontTertiary.opacity(0.08)),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule().strokeBorder(
-                        selected ? colors.primary.opacity(0.45) : Color.clear,
-                        lineWidth: 1
-                    )
-                )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: 3D 立体环绕（声像）
 
     private var pannerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "person.wave.2")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(colors.primary)
                 Text("3D 立体环绕")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("声像旋转 · 需使用耳机")
-                    .font(.system(size: 10))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                 if app.pannerEnabled {
                     MeloBadge("已启用", color: colors.primary)
                 }
@@ -467,14 +434,15 @@ struct SoundEffectPanel: View {
                 ))
                 .toggleStyle(.switch)
                 .controlSize(.small)
-                .font(.system(size: 11))
+                .tint(colors.primary)
+                .font(MeloFont.controlLabel)
             }
 
             HStack(spacing: 10) {
                 Text(Localizer.tr("player__sound_effect_panner_sound_speed"))
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 48, alignment: .leading)
+                    .frame(width: 52, alignment: .leading)
                 Slider(
                     value: Binding(
                         get: { Double(app.pannerSpeed) },
@@ -486,14 +454,14 @@ struct SoundEffectPanel: View {
                 .tint(colors.primary)
                 .frame(width: 180)
                 Text("\(app.pannerSpeed)")
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 26, alignment: .leading)
+                    .font(MeloFont.caption.monospacedDigit())
+                    .foregroundStyle(colors.font)
+                    .frame(width: 30, alignment: .leading)
 
                 Text(Localizer.tr("player__sound_effect_panner_sound_r"))
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 56, alignment: .leading)
+                    .frame(width: 60, alignment: .leading)
                 Slider(
                     value: Binding(
                         get: { Double(app.pannerSoundR) },
@@ -505,39 +473,40 @@ struct SoundEffectPanel: View {
                 .tint(colors.primary)
                 .frame(width: 150)
                 Text("\(app.pannerSoundR)")
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 26, alignment: .leading)
+                    .font(MeloFont.caption.monospacedDigit())
+                    .foregroundStyle(colors.font)
+                    .frame(width: 30, alignment: .leading)
                 Spacer(minLength: 0)
             }
             .disabled(!app.pannerEnabled)
             .opacity(app.pannerEnabled ? 1 : 0.45)
 
             Text("启用后声音会绕头部旋转（与原版 3D 环绕一致），建议佩戴耳机；未启用时普通立体声输出。")
-                .font(.system(size: 9.5))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
         }
-        .padding(14)
+        .padding(MeloMetrics.pageInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
     }
 
     // MARK: 底部
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 7) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(colors.badgeTertiary)
                     .padding(.top, 1)
                 Text("有音效时会切换到音效播放引擎，首次播放需要先缓存音频，可能短暂加载；音效设置与原版「自定义音频输出设备」存在冲突时，输出设备会被重置为默认设备。")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Spacer()
                 Button("全部重置") {
                     app.resetEQ()
@@ -545,26 +514,20 @@ struct SoundEffectPanel: View {
                     app.setConvolutionFileName(nil)
                     app.setPanner(enabled: false)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
 
                 Button("完成") { dismiss() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.primary)
-                    .controlSize(.small)
+                    .buttonStyle(.meloPrimary)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 14)
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(colors.mainBackground.opacity(colors.isDark ? 0.55 : 0.75))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(colors.border, lineWidth: 1)
-            )
+        RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
+            .fill(colors.cardFill)
+            .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
     }
 }
 
@@ -588,25 +551,25 @@ private struct VerticalEQSlider: View {
 
             ZStack {
                 Capsule()
-                    .fill(colors.fontTertiary.opacity(0.16))
-                    .frame(width: 4, height: usable)
+                    .fill(colors.chipFill)
+                    .frame(width: 5, height: usable)
                     .position(x: centerX, y: height / 2)
 
                 Rectangle()
                     .fill(colors.border)
-                    .frame(width: 11, height: 1)
+                    .frame(width: 13, height: 1)
                     .position(x: centerX, y: zeroY)
 
                 Capsule()
-                    .fill(colors.primary.opacity(0.85))
-                    .frame(width: 4, height: max(abs(knobY - zeroY), 0))
+                    .fill(colors.primary)
+                    .frame(width: 5, height: max(abs(knobY - zeroY), 0))
                     .position(x: centerX, y: (knobY + zeroY) / 2)
 
                 Circle()
-                    .fill(colors.mainBackground)
+                    .fill(colors.cardFill)
                     .overlay(Circle().strokeBorder(colors.primary, lineWidth: 2))
                     .frame(width: knobRadius * 2, height: knobRadius * 2)
-                    .shadow(color: .black.opacity(0.16), radius: 2, y: 1)
+                    .shadow(color: colors.cardShadow, radius: 2, x: 0, y: 1)
                     .position(x: centerX, y: knobY)
             }
             .contentShape(Rectangle())

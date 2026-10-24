@@ -30,8 +30,8 @@ struct PlayDetailView: View {
                 background
                 VStack(spacing: 0) {
                     topBar
-                    HStack(alignment: .top, spacing: 34) {
-                        leftPanel(size: min(320, max(180, geo.size.height * 0.40)))
+                    HStack(alignment: .top, spacing: 44) {
+                        leftPanel(size: min(400, max(200, geo.size.height * 0.46)))
                         VStack(alignment: .leading, spacing: 10) {
                             lyricPanel
                             CommentsPanel(app: app,
@@ -40,17 +40,19 @@ struct PlayDetailView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
-                    .padding(.horizontal, 36)
-                    .padding(.top, 6)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 10)
                     Spacer(minLength: 12)
                     bottomControls
-                        .padding(.horizontal, 40)
-                        .padding(.bottom, 24)
+                        .padding(.horizontal, 44)
+                        .padding(.bottom, 26)
                 }
             }
         }
-        // 播放详情是沉浸式深色面板（与原版一致），不跟随主题的亮色背景。
+        // 沉浸式深色面板：底图来自正在播放的封面
         .background(Color.black)
+        // 播放详情恒为深色，子视图（评论、音质徽标等）按暗色令牌取色
+        .environment(\.meloColors, AppColors.appleMusic(isDark: true))
         .onExitCommand { app.closePlayDetail() }
         .task(id: app.currentMusic?.picUrl) { loadBackgroundImage() }
     }
@@ -58,22 +60,7 @@ struct PlayDetailView: View {
     // MARK: 背景
 
     private var background: some View {
-        ZStack {
-            Color(white: 0.06)
-            if let backgroundImage {
-                Image(nsImage: backgroundImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .blur(radius: 55)
-                    .opacity(0.55)
-            }
-            LinearGradient(
-                colors: [Color.black.opacity(0.55), Color.black.opacity(0.85)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-        .ignoresSafeArea()
+        ArtworkBackdrop(image: backgroundImage, blurRadius: 70, dimOpacity: 0.5)
     }
 
     private func loadBackgroundImage() {
@@ -130,14 +117,14 @@ struct PlayDetailView: View {
     // MARK: 左侧信息
 
     private func leftPanel(size: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            CoverImage(urlString: app.currentMusic?.picUrl, size: size, cornerRadius: 14)
-                .shadow(color: .black.opacity(0.4), radius: 24, y: 10)
+        VStack(alignment: .leading, spacing: 22) {
+            CoverImage(urlString: app.currentMusic?.picUrl, size: size, cornerRadius: MeloMetrics.heroCoverRadius)
+                .meloCoverShadow(intensity: 2.4)
 
             if app.isAudioVisualizationEnabled {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("音频可视化")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(MeloFont.microCaption)
                         .foregroundStyle(.white.opacity(0.35))
                     PlayDetailSpectrumView(app: app)
                 }
@@ -145,39 +132,40 @@ struct PlayDetailView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(app.currentMusic?.name ?? "未在播放")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(2)
                 Text(app.currentMusic?.singer ?? "—")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .lineLimit(1)
                 if let album = app.currentMusic?.albumName, !album.isEmpty {
                     Text(album)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(.white.opacity(0.45))
                         .lineLimit(1)
                 }
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 if let music = app.currentMusic {
                     Button {
                         app.toggleFavorite(music)
                     } label: {
-                        Label(
-                            app.isFavorite(music) ? "已收藏" : Localizer.tr("love_list"),
-                            systemImage: app.isFavorite(music) ? "heart.fill" : "heart"
-                        )
-                        .font(.system(size: 11))
+                        Image(systemName: app.isFavorite(music) ? "heart.fill" : "heart")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundStyle(app.isFavorite(music) ? .white : .white.opacity(0.65))
+                            .frame(width: 34, height: 34)
+                            .background(.white.opacity(0.14), in: Circle())
+                            .contentShape(Circle())
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.white)
-                    .foregroundStyle(.white)
+                    .buttonStyle(.plain)
+                    .help(app.isFavorite(music) ? "取消收藏" : "收藏到「我的收藏」")
                 }
                 if app.isResolvingMusic {
                     ProgressView().controlSize(.small)
                     Text("正在获取播放地址…")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(.white.opacity(0.55))
                 }
             }
@@ -212,6 +200,7 @@ struct PlayDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
                 .fixedSize()
                 .help("歌词设置")
             }
@@ -293,16 +282,16 @@ struct PlayDetailView: View {
                             currentTime: app.currentTime,
                             isPlaying: app.isPlaying,
                             fontSize: currentSize,
-                            fontWeight: .semibold,
-                            playedColor: colors.primary,
-                            unplayedColor: .white.opacity(0.55),
+                            fontWeight: .bold,
+                            playedColor: .white,
+                            unplayedColor: .white.opacity(0.32),
                             alignment: lyricStackAlignment
                         )
                         .frame(maxWidth: .infinity, alignment: lyricFrameAlignment)
                     } else {
                         Text(text)
-                            .font(.system(size: lineSize, weight: isCurrent ? .semibold : .regular))
-                            .foregroundStyle(isCurrent ? colors.primary : .white.opacity(0.55))
+                            .font(.system(size: lineSize, weight: isCurrent ? .bold : .regular))
+                            .foregroundStyle(isCurrent ? Color.white : .white.opacity(0.32))
                             .multilineTextAlignment(lyricTextAlignment)
                             .frame(maxWidth: .infinity, alignment: lyricFrameAlignment)
                     }
@@ -493,10 +482,10 @@ struct PlayDetailView: View {
     // MARK: 底部控制
 
     private var bottomControls: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 10) {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Text(MeloUtils.formatTime(scrubTime ?? app.currentTime))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(MeloFont.timecode)
                     .foregroundStyle(.white.opacity(0.6))
                     .frame(width: 44, alignment: .trailing)
 
@@ -513,23 +502,24 @@ struct PlayDetailView: View {
                         }
                     }
                 )
-                .controlSize(.small)
-                .tint(colors.primary)
+                .controlSize(.mini)
+                .tint(.white)
                 .disabled(app.duration <= 0)
 
                 Text(MeloUtils.formatTime(app.duration))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(MeloFont.timecode)
                     .foregroundStyle(.white.opacity(0.45))
                     .frame(width: 44, alignment: .leading)
             }
 
-            HStack(spacing: 26) {
+            HStack(spacing: 34) {
                 Button {
                     app.previous()
                 } label: {
                     Image(systemName: "backward.fill")
-                        .font(.system(size: 17))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(.system(size: 20))
+                        .foregroundStyle(app.playQueue.isEmpty ? .white.opacity(0.35) : .white)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .disabled(app.playQueue.isEmpty)
@@ -538,14 +528,11 @@ struct PlayDetailView: View {
                 Button {
                     app.togglePlayPause()
                 } label: {
-                    ZStack {
-                        Circle().fill(.white.opacity(0.95))
-                        Image(systemName: app.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(colors.mainBackground)
-                            .offset(x: app.isPlaying ? 0 : 2)
-                    }
-                    .frame(width: 52, height: 52)
+                    Image(systemName: app.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(app.currentMusic == nil ? .white.opacity(0.35) : .white)
+                        .frame(width: 44, height: 34)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .disabled(app.currentMusic == nil)
@@ -555,8 +542,9 @@ struct PlayDetailView: View {
                     app.next()
                 } label: {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 17))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(.system(size: 20))
+                        .foregroundStyle(app.playQueue.isEmpty ? .white.opacity(0.35) : .white)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .disabled(app.playQueue.isEmpty)

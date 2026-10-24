@@ -69,16 +69,17 @@ struct SongListView: View {
             } label: {
                 HStack(spacing: 5) {
                     Text(currentSourceName)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(MeloFont.controlLabel)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundStyle(colors.fontSecondary)
-                .padding(.horizontal, 10)
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                .background(colors.chipFill, in: Capsule())
             }
             .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .fixedSize()
 
             Button {
@@ -86,16 +87,16 @@ struct SongListView: View {
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "tag")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                     Text(currentTagName)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(MeloFont.controlLabel)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundStyle(colors.fontSecondary)
-                .padding(.horizontal, 10)
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                .background(colors.chipFill, in: Capsule())
             }
             .buttonStyle(.plain)
             .popover(isPresented: $showTagPopover, arrowEdge: .bottom) {
@@ -106,7 +107,7 @@ struct SongListView: View {
                 Task { await app.loadSongListHub() }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 16)
         .padding(.bottom, 8)
     }
@@ -123,54 +124,41 @@ struct SongListView: View {
     // MARK: 排序 / 筛选
 
     private var filterBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if !app.songListSorts.isEmpty {
-                HStack(spacing: 2) {
+                HStack(spacing: 8) {
                     ForEach(app.songListSorts) { sort in
-                        Button {
+                        MeloChip(text: sort.name, isSelected: app.selectedSongListSortId == sort.id) {
                             guard app.selectedSongListSortId != sort.id else { return }
                             Task { await app.selectSongListSort(sort.id) }
-                        } label: {
-                            Text(sort.name)
-                                .font(.system(size: 11, weight: app.selectedSongListSortId == sort.id ? .semibold : .regular))
-                                .foregroundStyle(app.selectedSongListSortId == sort.id ? colors.primary : colors.fontSecondary)
-                                .padding(.horizontal, 11)
-                                .padding(.vertical, 4)
-                                .background(
-                                    app.selectedSongListSortId == sort.id ? colors.mainBackground : Color.clear,
-                                    in: Capsule()
-                                )
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-                .padding(2)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
             }
 
             if !app.selectedSongListTagId.isEmpty {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Text("标签：\(currentTagName)")
-                        .font(.system(size: 10))
+                        .font(MeloFont.controlLabel)
                         .foregroundStyle(colors.primary)
                     Button {
                         Task { await app.selectSongListTag("") }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(colors.fontTertiary)
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .background(colors.primaryOpacity(0.10), in: Capsule())
             }
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.bottom, 12)
     }
 
     // MARK: 内容
@@ -183,8 +171,8 @@ struct SongListView: View {
             VStack(spacing: 10) {
                 ProgressView()
                 Text("正在加载歌单…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(colors.fontSecondary)
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = app.songListError, app.songListPage.list.isEmpty {
@@ -212,9 +200,9 @@ struct SongListView: View {
                 }
                 ScrollView {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 172), spacing: 14)],
+                        columns: [GridItem(.adaptive(minimum: 160), spacing: MeloMetrics.gridSpacing)],
                         alignment: .leading,
-                        spacing: 14
+                        spacing: MeloMetrics.gridSpacing
                     ) {
                         ForEach(app.songListPage.list) { item in
                             SongListCard(item: item) {
@@ -222,16 +210,15 @@ struct SongListView: View {
                                 MeloUIActions.openSongList(item: item, app: app)
                             }
                             .overlay(
-                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
                                     .strokeBorder(
                                         selectedSongListID == item.id ? colors.primary : Color.clear,
-                                        lineWidth: 1.5
+                                        lineWidth: 2
                                     )
                             )
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 2)
+                    .padding(MeloMetrics.pageInset)
                 }
                 LoadMoreBar(
                     page: app.songListPage.page,
@@ -248,25 +235,25 @@ struct SongListView: View {
     // MARK: 标签面板
 
     private var tagPopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("选择标签")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(MeloFont.cardTitle)
                     .foregroundStyle(colors.font)
                 Spacer()
                 Button(Localizer.tr("close")) { showTagPopover = false }
                     .buttonStyle(.plain)
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
 
             if app.songListTags.isEmpty {
                 Text(app.isLoadingSongList ? "标签加载中…" : "当前音源没有提供标签")
-                    .font(.system(size: 11))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         if !app.songListTags.hot.isEmpty {
                             tagSection(title: Localizer.tr("songlist__tag_info_hot_tag"), tags: app.songListTags.hot)
                         }
@@ -278,36 +265,21 @@ struct SongListView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(width: 460, height: 360)
     }
 
     private func tagSection(title: String, tags: [SongListTag]) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(colors.fontTertiary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 86), spacing: 6)], alignment: .leading, spacing: 6) {
+                .font(MeloFont.controlLabel)
+                .foregroundStyle(colors.fontSecondary)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(tags) { tag in
-                    Button {
+                    MeloChip(text: tag.name, isSelected: app.selectedSongListTagId == tag.id) {
                         showTagPopover = false
                         Task { await app.selectSongListTag(tag.id) }
-                    } label: {
-                        Text(tag.name)
-                            .font(.system(size: 10.5, weight: app.selectedSongListTagId == tag.id ? .semibold : .regular))
-                            .foregroundStyle(app.selectedSongListTagId == tag.id ? colors.primary : colors.fontSecondary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .background(
-                                app.selectedSongListTagId == tag.id
-                                    ? colors.primaryOpacity(0.14)
-                                    : colors.fontTertiary.opacity(0.08),
-                                in: Capsule()
-                            )
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }

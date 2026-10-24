@@ -5,12 +5,12 @@ import MeloCore
 // MARK: - 歌曲表格（我的列表 / 搜索 / 榜单 / 歌单详情共用）
 
 enum SongTableColumns {
-    static let index: CGFloat = 46
+    static let index: CGFloat = 40
     static let singer: CGFloat = 150
     static let album: CGFloat = 160
-    static let duration: CGFloat = 62
-    static let actions: CGFloat = 72
-    static let rowHeight: CGFloat = 36
+    static let duration: CGFloat = 58
+    static let actions: CGFloat = 68
+    static let rowHeight: CGFloat = MeloMetrics.rowHeight
 }
 
 struct SongTableHeader: View {
@@ -26,10 +26,10 @@ struct SongTableHeader: View {
             Text(Localizer.tr("music_time")).frame(width: SongTableColumns.duration, alignment: .trailing)
             Text(Localizer.tr("action")).frame(width: SongTableColumns.actions, alignment: .center)
         }
-        .font(.system(size: 10, weight: .semibold))
+        .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(colors.fontTertiary)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 6)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.bottom, 8)
         .overlay(alignment: .bottom) {
             Rectangle().fill(colors.border).frame(height: 1)
         }
@@ -77,9 +77,9 @@ struct SongRow: View {
             indexCell
                 .frame(width: SongTableColumns.index, alignment: .center)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 7) {
                 Text(music.name)
-                    .font(.system(size: 12, weight: isCurrent ? .semibold : .regular))
+                    .font(.system(size: 13, weight: isCurrent ? .semibold : .regular))
                     .foregroundStyle(isCurrent ? colors.primary : colors.font)
                     .lineLimit(1)
                 QualityBadges(music: music)
@@ -87,38 +87,41 @@ struct SongRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(music.singer)
-                .font(.system(size: 12))
+                .font(MeloFont.body)
                 .foregroundStyle(colors.fontSecondary)
                 .lineLimit(1)
                 .frame(width: SongTableColumns.singer, alignment: .leading)
 
             Text(music.albumName.isEmpty ? "—" : music.albumName)
-                .font(.system(size: 12))
+                .font(MeloFont.body)
                 .foregroundStyle(colors.fontTertiary)
                 .lineLimit(1)
                 .frame(width: SongTableColumns.album, alignment: .leading)
 
             Text(music.displayInterval)
-                .font(.system(size: 10.5, design: .monospaced))
+                .font(MeloFont.timecode)
                 .foregroundStyle(colors.fontTertiary)
                 .frame(width: SongTableColumns.duration, alignment: .trailing)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 0) {
                 Button {
                     app.toggleFavorite(music)
                 } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(isFavorite ? colors.primary : colors.fontTertiary)
                 }
                 .buttonStyle(.plain)
                 .help(isFavorite ? Localizer.tr("setting__hot_key_player_music_unlove") : Localizer.tr("love_list"))
+                .frame(width: 22, height: 22)
+
+                Spacer(minLength: 0)
 
                 Menu {
                     rowMenuContent
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(colors.fontTertiary)
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -128,9 +131,9 @@ struct SongRow: View {
                 .fixedSize()
                 .help("更多操作")
             }
-            .frame(width: SongTableColumns.actions, alignment: .center)
+            .frame(width: SongTableColumns.actions)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .frame(height: SongTableColumns.rowHeight)
         .background(rowBackground)
         .contentShape(Rectangle())
@@ -144,23 +147,29 @@ struct SongRow: View {
         .help("\(music.name) - \(music.singer)")
     }
 
+    /// Apple Music：hover 时序号位置变成播放键
     private var indexCell: some View {
         Group {
             if isCurrent {
                 Image(systemName: isPlayingRow ? "speaker.wave.2.fill" : "speaker.fill")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(colors.primary)
+            } else if hovering {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(colors.font)
             } else {
                 Text("\(index + 1)")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 12))
+                    .monospacedDigit()
                     .foregroundStyle(colors.fontTertiary)
             }
         }
     }
 
     private var rowBackground: Color {
-        if isCurrent { return colors.primaryOpacity(0.10) }
         if isSelected { return colors.selected }
+        if isCurrent { return colors.primaryOpacity(0.08) }
         if hovering { return colors.hover }
         return .clear
     }

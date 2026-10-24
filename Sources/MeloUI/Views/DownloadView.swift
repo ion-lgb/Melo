@@ -45,7 +45,7 @@ struct DownloadView: View {
                 disabledBanner
             }
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 18) {
                     if tasks.isEmpty {
                         emptyStateBlock
                     } else {
@@ -53,8 +53,8 @@ struct DownloadView: View {
                     }
                     historySection
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+                .padding(.horizontal, MeloMetrics.pageInset)
+                .padding(.bottom, 20)
             }
         }
         .alert("清除已完成任务", isPresented: $showClearCompletedConfirm) {
@@ -87,27 +87,24 @@ struct DownloadView: View {
                     app.pauseAllDownloads()
                 } label: {
                     Label("全部暂停", systemImage: "pause.fill")
-                        .font(.system(size: 11))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.meloSecondary)
                 .disabled(!app.isDownloadEnabled || activeCount == 0)
 
                 Button {
                     app.resumeAllDownloads()
                 } label: {
                     Label("全部继续", systemImage: "play.fill")
-                        .font(.system(size: 11))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.meloSecondary)
                 .disabled(!app.isDownloadEnabled || (waitingTasks.count + runningTasks.filter { $0.status == "pause" }.count) == 0)
 
                 Button {
                     showClearCompletedConfirm = true
                 } label: {
                     Label("清除已完成任务", systemImage: "trash")
-                        .font(.system(size: 11))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.meloSecondary)
                 .disabled(completedTasks.isEmpty)
 
                 MeloIconButton(systemName: "folder", help: "打开下载目录") {
@@ -118,9 +115,9 @@ struct DownloadView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 16)
-        .padding(.bottom, 12)
+        .padding(.bottom, 14)
     }
 
     private var subtitle: String {
@@ -147,55 +144,46 @@ struct DownloadView: View {
     // MARK: 未开启下载
 
     private var disabledBanner: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "arrow.down.circle")
-                .font(.system(size: 14))
+                .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(colors.badgeTertiary)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("下载功能未开启")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(MeloFont.cardTitle)
                     .foregroundStyle(colors.font)
                 Text("开启后可保存歌曲到本地，并支持嵌入封面与歌词。")
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
             }
-            Spacer()
-            Button {
-                app.route = .settings
-            } label: {
-                Label("去设置开启", systemImage: "gearshape")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(colors.badgeTertiary.opacity(0.08), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(colors.badgeTertiary.opacity(0.22), lineWidth: 1)
-        )
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(colors.cardFill, in: RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous))
+        .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.bottom, 12)
     }
 
     // MARK: 空态
 
     private var emptyStateBlock: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "arrow.down.circle")
-                .font(.system(size: 38, weight: .light))
-                .foregroundStyle(colors.fontTertiary.opacity(0.55))
+        VStack(spacing: 14) {
+            ZStack {
+                Circle().fill(colors.chipFill).frame(width: 84, height: 84)
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 34, weight: .ultraLight))
+                    .foregroundStyle(colors.fontTertiary)
+            }
             Text(app.isDownloadEnabled ? "暂无下载任务" : "下载功能已关闭")
-                .font(.system(size: 15, weight: .semibold))
+                .font(MeloFont.sectionTitle)
                 .foregroundStyle(colors.font)
             Text(
                 app.isDownloadEnabled
                     ? "在歌曲右键菜单或搜索结果中点击「下载」即可加入队列；下载目录：\(savePath)"
                     : "前往「设置 → 下载」开启下载功能后再开始下载。"
             )
-            .font(.system(size: 11))
+            .font(MeloFont.secondary)
             .foregroundStyle(colors.fontSecondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -205,13 +193,11 @@ struct DownloadView: View {
                 app.route = app.isDownloadEnabled ? .search : .settings
             } label: {
                 Label(app.isDownloadEnabled ? "去搜索歌曲" : "去设置开启", systemImage: app.isDownloadEnabled ? "magnifyingglass" : "gearshape")
-                    .font(.system(size: 11.5, weight: .medium))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
+            .buttonStyle(.meloPrimary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 34)
+        .padding(.vertical, 40)
     }
 
     // MARK: 运行时任务列表
@@ -228,39 +214,38 @@ struct DownloadView: View {
     @ViewBuilder
     private func section(_ title: String, systemImage: String, tasks: [DownloadTaskInfo]) -> some View {
         if !tasks.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 7) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(colors.primary)
                     Text(title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(colors.fontSecondary)
+                        .font(MeloFont.cardTitle)
+                        .foregroundStyle(colors.font)
                     Text("\(tasks.count)")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(MeloFont.microCaption.monospacedDigit())
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
-                .padding(.top, 2)
+                .padding(.horizontal, 4)
 
                 VStack(spacing: 0) {
                     ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                         DownloadTaskRow(app: app, task: task)
                         if index < tasks.count - 1 {
-                            Divider().overlay(colors.border)
+                            Divider().overlay(colors.border).padding(.leading, 68)
                         }
                     }
                 }
-                .background(
-                    colors.mainBackground.opacity(colors.isDark ? 0.55 : 0.75),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(colors.border, lineWidth: 1)
-                )
+                .background(colors.cardFill, in: groupShape)
+                .clipShape(groupShape)
+                .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
             }
         }
+    }
+
+    private var groupShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
     }
 
     // MARK: 下载历史（原版 download_list）
@@ -268,26 +253,26 @@ struct DownloadView: View {
     private var history: [DownloadTaskInfo] { app.downloadHistory }
 
     private var historySection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         historyExpanded.toggle()
                     }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         Image(systemName: historyExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 8, weight: .semibold))
+                            .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(colors.fontTertiary)
-                            .frame(width: 10)
+                            .frame(width: 11)
                         Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(colors.primary)
                         Text("历史记录（原版 download_list）")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(colors.fontSecondary)
+                            .font(MeloFont.cardTitle)
+                            .foregroundStyle(colors.font)
                         Text("\(history.count)")
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(MeloFont.microCaption.monospacedDigit())
                             .foregroundStyle(colors.fontTertiary)
                     }
                 }
@@ -295,7 +280,7 @@ struct DownloadView: View {
 
                 if !history.isEmpty {
                     Text("· 已下载记录，仅供查看")
-                        .font(.system(size: 9.5))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                 }
 
@@ -306,85 +291,77 @@ struct DownloadView: View {
                         showClearHistoryConfirm = true
                     } label: {
                         Label("清空已完成记录", systemImage: "trash")
-                            .font(.system(size: 10))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     .help("从 download_list 中清空已完成记录（不删除本地文件）")
                 }
             }
-            .padding(.top, 4)
+            .padding(.horizontal, 4)
 
             if historyExpanded {
                 if history.isEmpty {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Image(systemName: "tray")
-                            .font(.system(size: 11))
+                            .font(.system(size: 13))
                             .foregroundStyle(colors.fontTertiary)
                         Text("暂无下载历史。完成下载后，记录会显示在这里（来自原版 download_list）。")
-                            .font(.system(size: 10.5))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                         Spacer()
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 9)
-                    .background(
-                        colors.fontTertiary.opacity(0.05),
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(colors.cardFill, in: groupShape)
+                    .clipShape(groupShape)
+                    .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(history.enumerated()), id: \.element.id) { index, record in
                             historyRow(record)
                             if index < history.count - 1 {
-                                Divider().overlay(colors.border)
+                                Divider().overlay(colors.border).padding(.leading, 58)
                             }
                         }
                     }
-                    .background(
-                        colors.mainBackground.opacity(colors.isDark ? 0.55 : 0.75),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(colors.border, lineWidth: 1)
-                    )
+                    .background(colors.cardFill, in: groupShape)
+                    .clipShape(groupShape)
+                    .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
                 }
             }
         }
     }
 
     private func historyRow(_ record: DownloadTaskInfo) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            CoverImage(urlString: record.musicInfo.picUrl, size: 34, cornerRadius: 5)
+        HStack(alignment: .center, spacing: 12) {
+            CoverImage(urlString: record.musicInfo.picUrl, size: 40)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(record.musicInfo.name)
-                        .font(.system(size: 11.5, weight: .medium))
+                        .font(MeloFont.body.weight(.medium))
                         .foregroundStyle(colors.font)
                         .lineLimit(1)
                     Text(record.musicInfo.singer)
-                        .font(.system(size: 9.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
                         .lineLimit(1)
                     MeloBadge(historyQualityLabel(record.quality), color: colors.badgePrimary)
-                    MeloBadge(record.ext.uppercased(), color: colors.badgeTertiary)
+                    MeloBadge(record.ext.uppercased(), color: colors.badgeSecondary)
                     Spacer(minLength: 0)
                 }
                 HStack(spacing: 6) {
                     Text(record.fileName)
-                        .font(.system(size: 9.5, design: .monospaced))
+                        .font(MeloFont.caption.monospacedDigit())
                         .foregroundStyle(colors.fontSecondary)
                         .lineLimit(1)
                     Text("·")
                         .foregroundStyle(colors.fontTertiary)
                     Text(record.isCompleted ? "已完成" : (record.statusText.isEmpty ? record.status : record.statusText))
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(record.isCompleted ? colors.primary : colors.fontTertiary)
+                        .font(MeloFont.caption)
+                        .foregroundStyle(record.isCompleted ? colors.primary : colors.badgeTertiary)
                     Spacer(minLength: 0)
                     Text(record.filePath.isEmpty ? "—" : record.filePath)
-                        .font(.system(size: 9))
+                        .font(MeloFont.microCaption)
                         .foregroundStyle(colors.fontTertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -396,9 +373,9 @@ struct DownloadView: View {
                     revealHistoryRecord(record)
                 } label: {
                     Image(systemName: "folder")
-                        .font(.system(size: 10.5, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(colors.fontSecondary)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 26, height: 26)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -409,17 +386,17 @@ struct DownloadView: View {
                     app.removeDownloadHistory(ids: [record.id])
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 10.5, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(colors.fontSecondary)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 26, height: 26)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("删除该下载记录（不删除文件）")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .contextMenu {
             Button("在 Finder 中显示") { revealHistoryRecord(record) }
                 .disabled(record.filePath.isEmpty)
@@ -519,56 +496,56 @@ private struct DownloadTaskRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            CoverImage(urlString: task.musicInfo.picUrl, size: 44, cornerRadius: 6)
+            CoverImage(urlString: task.musicInfo.picUrl, size: 46)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 7) {
                     Text(task.musicInfo.name)
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(MeloFont.body.weight(.medium))
                         .foregroundStyle(colors.font)
                         .lineLimit(1)
                     Text(task.musicInfo.singer)
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     MeloBadge(qualityLabel, color: colors.badgePrimary)
-                    MeloBadge(task.ext.uppercased(), color: colors.badgeTertiary)
+                    MeloBadge(task.ext.uppercased(), color: colors.badgeSecondary)
                     Text(task.statusText.isEmpty ? statusLabel : task.statusText)
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(statusColor)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     if task.status == "waiting" {
                         Image(systemName: "clock")
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundStyle(colors.fontTertiary)
                     }
                 }
 
                 progressBar
 
-                HStack(spacing: 6) {
+                HStack(spacing: 7) {
                     Text(percentText)
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(MeloFont.microCaption.monospacedDigit())
                         .foregroundStyle(task.isCompleted ? colors.primary : colors.fontSecondary)
                     Text("· \(byteText)")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(MeloFont.microCaption.monospacedDigit())
                         .foregroundStyle(colors.fontTertiary)
                     if showsTransferStats {
                         Text("· 速度 \(speedText)")
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(MeloFont.microCaption.monospacedDigit())
                             .foregroundStyle(colors.fontTertiary)
                         Text("· 剩余 \(etaText)")
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(MeloFont.microCaption.monospacedDigit())
                             .foregroundStyle(colors.fontTertiary)
                     }
                     Spacer(minLength: 0)
                     Text(task.fileName)
-                        .font(.system(size: 9))
+                        .font(MeloFont.microCaption)
                         .foregroundStyle(colors.fontTertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -578,8 +555,8 @@ private struct DownloadTaskRow: View {
             actions
                 .frame(width: 92, alignment: .trailing)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(hovering ? colors.hover : Color.clear)
         .onHover { hovering = $0 }
         .contextMenu { menuContent }
@@ -598,10 +575,9 @@ private struct DownloadTaskRow: View {
 
     private var statusColor: Color {
         switch task.status {
-        case "run": return colors.primary
-        case "completed": return colors.badgePrimary
-        case "error": return .red
-        case "pause": return colors.badgeTertiary
+        case "run", "pause", "error": return colors.badgeTertiary
+        case "completed": return colors.primary
+        case "waiting": return colors.fontTertiary
         default: return colors.fontTertiary
         }
     }
@@ -609,9 +585,9 @@ private struct DownloadTaskRow: View {
     private var progressBar: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
-                Capsule().fill(colors.fontTertiary.opacity(0.14))
+                Capsule().fill(colors.chipFill)
                 Capsule()
-                    .fill(task.status == "error" ? Color.red.opacity(0.6) : colors.primary)
+                    .fill(statusColor)
                     .frame(width: proxy.size.width * ratio)
             }
         }
@@ -646,9 +622,9 @@ private struct DownloadTaskRow: View {
     private func actionButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(colors.fontSecondary)
-                .frame(width: 24, height: 24)
+                .frame(width: 26, height: 26)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

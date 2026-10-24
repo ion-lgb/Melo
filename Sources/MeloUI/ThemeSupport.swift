@@ -16,27 +16,37 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - 主题背景
+// MARK: - 派生令牌
 
-/// 主题背景：纯色 + 可选的背景图（内置主题 5 张 / 用户主题来自 LxDatas/theme_images）。
+extension AppColors {
+    /// 卡片/分组行底色（浅色为白，浮在浅灰分组背景上）
+    var cardFill: Color {
+        isDark ? Color(.sRGB, red: 0.110, green: 0.110, blue: 0.118) : .white
+    }
+    /// 分组页面底色（设置类页面）
+    var groupedBackground: Color {
+        isDark ? Color(.sRGB, red: 0.055, green: 0.055, blue: 0.059)
+               : Color(.sRGB, red: 0.957, green: 0.957, blue: 0.965)
+    }
+    /// 卡片投影
+    var cardShadow: Color {
+        isDark ? .black.opacity(0.45) : .black.opacity(0.07)
+    }
+    /// 次级按钮 / 输入框 / 药丸底色
+    var chipFill: Color {
+        isDark ? .white.opacity(0.10) : .black.opacity(0.055)
+    }
+}
+
+// MARK: - 页面背景
+
+/// 内容区背景：Apple Music 风格不使用主题背景图，只铺纯色底。
 struct ThemeBackground: View {
     let colors: AppColors
-    let imageURL: URL?
 
     var body: some View {
-        ZStack {
-            // 兜底底色：部分主题 --color-app-background 为全透明（如 black/mid_autumn），
-            // 若不铺底色会透出窗口默认白色，深色主题下文字不可读。
-            colors.isDark ? Color(white: 0.045) : Color.white
-            colors.appBackground
-            if let imageURL, let image = NSImage(contentsOf: imageURL) {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .opacity(colors.isDark ? 0.62 : 0.72)
-            }
-        }
-        .ignoresSafeArea()
+        colors.mainBackground
+            .ignoresSafeArea()
     }
 }
 
@@ -62,7 +72,7 @@ struct MeloCard<Content: View>: View {
     @Environment(\.meloColors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 if let systemImage {
                     Image(systemName: systemImage)
@@ -70,28 +80,25 @@ struct MeloCard<Content: View>: View {
                         .foregroundStyle(colors.primary)
                 }
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Spacer(minLength: 0)
             }
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             content
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            colors.mainBackground.opacity(colors.isDark ? 0.62 : 0.78),
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous)
+                .fill(colors.cardFill)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(colors.border, lineWidth: 1)
-        )
+        .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
     }
 }
 
@@ -109,57 +116,17 @@ struct PageTitle: View {
     @Environment(\.meloColors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 20, weight: .bold))
+                .font(MeloFont.pageTitle)
                 .foregroundStyle(colors.font)
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
             }
         }
-    }
-}
-
-// MARK: - 主题预览色解析
-
-/// 从主题 JSON 的 CSS 变量里解析出预览色（支持一层/多层 `var(...)` 引用）。
-enum ThemePreview {
-    static func variables(_ theme: Theme) -> [String: String] {
-        var vars = theme.config.themeColors
-        for (key, value) in theme.config.extInfo {
-            vars[key] = value
-        }
-        return vars
-    }
-
-    static func color(_ key: String, in theme: Theme, depth: Int = 0) -> Color? {
-        guard depth < 8 else { return nil }
-        let vars = variables(theme)
-        guard let raw = vars[key] else { return nil }
-        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.hasPrefix("var(") {
-            var inner = String(value.dropFirst(4))
-            if inner.hasSuffix(")") { inner = String(inner.dropLast()) }
-            inner = inner.trimmingCharacters(in: .whitespaces)
-            return color(inner, in: theme, depth: depth + 1)
-        }
-        return RGBAColor(css: value)?.color
-    }
-
-    static func primary(_ theme: Theme) -> Color {
-        color("--color-primary", in: theme) ?? .accentColor
-    }
-
-    static func background(_ theme: Theme) -> Color {
-        color("--color-main-background", in: theme)
-            ?? color("--color-app-background", in: theme)
-            ?? (theme.isDark ? Color(red: 0.09, green: 0.09, blue: 0.09) : Color.white)
-    }
-
-    static func badge(_ theme: Theme) -> Color {
-        color("--color-badge-secondary", in: theme) ?? primary(theme)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

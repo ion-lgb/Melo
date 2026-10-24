@@ -49,20 +49,20 @@ struct DislikeRulesSheet: View {
     private var header: some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                     .fill(colors.primary.opacity(0.12))
                 Image(systemName: "hand.raised.slash")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(colors.primary)
             }
-            .frame(width: 34, height: 34)
+            .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("不喜欢规则")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(colors.font)
                 Text("播放时会自动跳过匹配规则的歌曲（当前 \(ruleCount) 条）")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
@@ -72,8 +72,8 @@ struct DislikeRulesSheet: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 24, height: 24)
-                    .background(colors.fontTertiary.opacity(0.10), in: Circle())
+                    .frame(width: 26, height: 26)
+                    .background(colors.chipFill, in: Circle())
             }
             .buttonStyle(.plain)
         }
@@ -82,38 +82,34 @@ struct DislikeRulesSheet: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(colors.fontTertiary)
                     .padding(.top, 1)
                 Text("每行一条规则，支持三种写法：\n· `歌曲名@艺术家`（同时匹配歌名与歌手）\n· `歌曲名`（只匹配歌名）\n· `@艺术家`（只匹配歌手）\n歌曲名或艺术家本身包含 @ 时，用 # 代替（例如 `A#B@歌手`）。规则会保存到原版 dislike_list 表。")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(9)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colors.fontTertiary.opacity(0.05), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
 
             TextEditor(text: $text)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(8)
-                .background(colors.fontTertiary.opacity(0.04), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .strokeBorder(colors.border, lineWidth: 1)
-                )
+                .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
 
             HStack(spacing: 6) {
                 Text("共 \(ruleCount) 条规则")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
                 Spacer()
                 Text("示例：晴天@周杰伦 / 起风了 / @买辣椒也用券")
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
         }
@@ -121,22 +117,22 @@ struct DislikeRulesSheet: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
-            Button(role: .destructive) {
+        HStack(spacing: 10) {
+            Button {
                 showClearConfirm = true
             } label: {
                 Label("清空规则", systemImage: "trash")
-                    .font(.system(size: 10.5))
+                    .foregroundStyle(colors.primary)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(.meloSecondary)
             .disabled(app.dislikeRules.isEmpty && text.isEmpty)
+            .opacity(app.dislikeRules.isEmpty && text.isEmpty ? 0.5 : 1)
 
             Spacer()
 
             Button(Localizer.tr("btn_cancel")) { dismiss() }
+                .buttonStyle(.meloSecondary)
                 .keyboardShortcut(.cancelAction)
-                .controlSize(.small)
 
             Button {
                 app.saveDislikeRulesText(text)
@@ -145,12 +141,10 @@ struct DislikeRulesSheet: View {
                 Text("保存规则")
                     .frame(minWidth: 72)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
-            .controlSize(.small)
+            .buttonStyle(.meloPrimary)
             .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
     }
 }

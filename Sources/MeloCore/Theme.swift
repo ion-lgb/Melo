@@ -116,29 +116,52 @@ public struct AppColors {
     public var buttonHide: Color
     public var buttonMin: Color
     public var buttonClose: Color
-    public var backgroundImageURL: URL?
 
-    public static let fallback = AppColors(
-        isDark: false,
-        primary: Color(red: 0.30, green: 0.69, blue: 0.49),
-        primaryOpacity: { Color(red: 0.30, green: 0.69, blue: 0.49).opacity($0) },
-        appBackground: Color.white,
-        mainBackground: Color.white,
-        navFont: Color(red: 0.30, green: 0.69, blue: 0.49),
-        font: Color(red: 0.13, green: 0.13, blue: 0.13),
-        fontSecondary: Color(red: 0.13, green: 0.13, blue: 0.13).opacity(0.65),
-        fontTertiary: Color(red: 0.13, green: 0.13, blue: 0.13).opacity(0.4),
-        border: Color.black.opacity(0.08),
-        hover: Color.black.opacity(0.05),
-        selected: Color(red: 0.30, green: 0.69, blue: 0.49).opacity(0.14),
-        badgePrimary: Color(red: 0.30, green: 0.69, blue: 0.49),
-        badgeSecondary: Color(red: 0.29, green: 0.68, blue: 0.84),
-        badgeTertiary: Color(red: 0.91, green: 0.67, blue: 0.21),
-        buttonHide: Color(red: 0.23, green: 0.76, blue: 0.70),
-        buttonMin: Color(red: 0.52, green: 0.77, blue: 0.23),
-        buttonClose: Color(red: 0.98, green: 0.71, blue: 0.63),
-        backgroundImageURL: nil
-    )
+    /// Apple Music 风格固定配色：外观不再跟随 LX 主题（主题仅用于数据兼容与导入导出），
+    /// 明暗只由系统外观决定。
+    public static func appleMusic(isDark: Bool) -> AppColors {
+        let accent = isDark
+            ? Color(.sRGB, red: 0.984, green: 0.227, blue: 0.298)   // #FB3A4C
+            : Color(.sRGB, red: 0.980, green: 0.141, blue: 0.235)   // #FA243C
+        let neutralGray = isDark
+            ? Color(.sRGB, red: 0.596, green: 0.596, blue: 0.624)   // #98989F
+            : Color(.sRGB, red: 0.525, green: 0.525, blue: 0.545)   // #86868B
+        let amber = isDark
+            ? Color(.sRGB, red: 0.941, green: 0.651, blue: 0.227)   // #F0A63A
+            : Color(.sRGB, red: 0.631, green: 0.384, blue: 0.027)   // #A16207
+        let font = isDark
+            ? Color(.sRGB, red: 0.961, green: 0.961, blue: 0.969)   // #F5F5F7
+            : Color(.sRGB, red: 0.114, green: 0.114, blue: 0.122)   // #1D1D1F
+        let mainBackground = isDark
+            ? Color(.sRGB, red: 0.082, green: 0.082, blue: 0.086)   // #151516
+            : Color(.sRGB, red: 1, green: 1, blue: 1)
+        let appBackground = isDark
+            ? Color(.sRGB, red: 0.043, green: 0.043, blue: 0.047)   // #0B0B0C
+            : Color(.sRGB, red: 0.969, green: 0.969, blue: 0.976)   // #F7F7F9
+
+        return AppColors(
+            isDark: isDark,
+            primary: accent,
+            primaryOpacity: { accent.opacity($0) },
+            appBackground: appBackground,
+            mainBackground: mainBackground,
+            navFont: accent,
+            font: font,
+            fontSecondary: font.opacity(isDark ? 0.66 : 0.62),
+            fontTertiary: font.opacity(isDark ? 0.42 : 0.38),
+            border: font.opacity(isDark ? 0.12 : 0.09),
+            hover: font.opacity(isDark ? 0.07 : 0.05),
+            selected: accent.opacity(isDark ? 0.24 : 0.13),
+            badgePrimary: accent,
+            badgeSecondary: neutralGray,
+            badgeTertiary: amber,
+            buttonHide: neutralGray,
+            buttonMin: neutralGray,
+            buttonClose: neutralGray
+        )
+    }
+
+    public static let fallback = AppColors.appleMusic(isDark: false)
 }
 
 // MARK: - 主题管理
@@ -154,17 +177,16 @@ public final class ThemeManager {
     )
     public private(set) var colors: AppColors = .fallback
     public private(set) var systemIsDark: Bool = false
-    public private(set) var backgroundImageURL: URL?
 
     private let settings: SettingsStore
     private let resourcesDirectory: URL
-    private let userThemeImagesDirectory: URL
+    private let dataDirectory: URL
     private var appearanceObservation: NSKeyValueObservation?
 
     public init(resourcesDirectory: URL, settings: SettingsStore, dataDirectory: URL) {
         self.resourcesDirectory = resourcesDirectory
         self.settings = settings
-        self.userThemeImagesDirectory = dataDirectory.appendingPathComponent("theme_images", isDirectory: true)
+        self.dataDirectory = dataDirectory
         loadThemes()
         self.systemIsDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         refreshCurrent()
@@ -214,7 +236,7 @@ public final class ThemeManager {
     // MARK: - 用户主题（LxDatas/theme.json，原版格式 `{ "themes": [Theme] }`）
 
     private var themeStoreURL: URL {
-        settings.fileURL.deletingLastPathComponent().appendingPathComponent("theme.json")
+        dataDirectory.appendingPathComponent("theme.json")
     }
 
     private func persistUserThemes() throws {
@@ -315,8 +337,7 @@ public final class ThemeManager {
             ?? builtinThemes.first
         guard let theme else { return }
         current = theme
-        colors = buildColors(theme)
-        resolveBackgroundImage(theme)
+        colors = buildColors()
     }
 
     public func selectTheme(id: String) {
@@ -342,94 +363,10 @@ public final class ThemeManager {
         refreshCurrent()
     }
 
-    // MARK: - 颜色解析
+    // MARK: - 颜色令牌
 
-    private func mergedVariables(_ theme: Theme) -> [String: String] {
-        var vars = theme.config.themeColors
-        for (key, value) in theme.config.extInfo {
-            vars[key] = value
-        }
-        return vars
-    }
-
-    private func buildColors(_ theme: Theme) -> AppColors {
-        let vars = mergedVariables(theme)
-        func parse(_ key: String, depth: Int = 0) -> RGBAColor? {
-            guard let raw = vars[key], depth < 8 else { return nil }
-            let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if value.hasPrefix("var(") {
-                let inner = value.dropFirst(4).dropLast(value.hasSuffix(")") ? 1 : 0)
-                let name = String(inner).trimmingCharacters(in: .whitespaces)
-                return parse(name, depth: depth + 1)
-            }
-            return RGBAColor(css: value)
-        }
-
-        let isDark = theme.isDark
-        let primaryRGBA = parse("--color-primary") ?? (isDark ? RGBAColor(r: 255, g: 255, b: 255) : RGBAColor(r: 77, g: 175, b: 124))
-        let primary = primaryRGBA.color
-        let appBackground = (parse("--color-app-background") ?? RGBAColor(r: isDark ? 0 : 255, g: isDark ? 0 : 255, b: isDark ? 0 : 255, a: isDark ? 0.8 : 1)).color
-        let mainBackground = (parse("--color-main-background") ?? RGBAColor(r: isDark ? 19 : 255, g: isDark ? 19 : 255, b: isDark ? 19 : 255, a: 1)).color
-        let navFont = (parse("--color-nav-font") ?? primaryRGBA).color
-        let fontRGBA = parse("--color-1000") ?? (isDark ? RGBAColor(r: 229, g: 229, b: 229) : RGBAColor(r: 33, g: 33, b: 33))
-        let font = fontRGBA.color
-        let fontSecondary = font.opacity(0.65)
-        let fontTertiary = font.opacity(0.42)
-        let border = font.opacity(isDark ? 0.14 : 0.08)
-        let hover = font.opacity(0.06)
-        let selected = primary.opacity(isDark ? 0.22 : 0.14)
-        let badgePrimary = (parse("--color-badge-primary") ?? primaryRGBA).color
-        let badgeSecondary = (parse("--color-badge-secondary") ?? RGBAColor(r: 75, g: 174, b: 213)).color
-        let badgeTertiary = (parse("--color-badge-tertiary") ?? RGBAColor(r: 231, g: 170, b: 54)).color
-        let buttonHide = (parse("--color-btn-hide") ?? RGBAColor(r: 59, g: 194, b: 178)).color
-        let buttonMin = (parse("--color-btn-min") ?? RGBAColor(r: 133, g: 196, b: 59)).color
-        let buttonClose = (parse("--color-btn-close") ?? RGBAColor(r: 250, g: 180, b: 160)).color
-
-        return AppColors(
-            isDark: isDark,
-            primary: primary,
-            primaryOpacity: { primary.opacity($0) },
-            appBackground: appBackground,
-            mainBackground: mainBackground,
-            navFont: navFont,
-            font: font,
-            fontSecondary: fontSecondary,
-            fontTertiary: fontTertiary,
-            border: border,
-            hover: hover,
-            selected: selected,
-            badgePrimary: badgePrimary,
-            badgeSecondary: badgeSecondary,
-            badgeTertiary: badgeTertiary,
-            buttonHide: buttonHide,
-            buttonMin: buttonMin,
-            buttonClose: buttonClose,
-            backgroundImageURL: nil
-        )
-    }
-
-    private func resolveBackgroundImage(_ theme: Theme) {
-        guard let raw = theme.config.extInfo["--background-image"],
-              raw != "none", !raw.isEmpty else {
-            backgroundImageURL = nil
-            return
-        }
-        var path = raw
-        if let range = raw.range(of: "url(") {
-            path = String(raw[range.upperBound...])
-            if path.hasSuffix(")") { path = String(path.dropLast()) }
-            path = path.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
-        }
-        // 内置主题: ./theme_images/xxx.png；用户主题: 文件名（存于 LxDatas/theme_images）
-        let lastComponent = (path as NSString).lastPathComponent
-        if path.contains("theme_images") {
-            let builtin = ResourceLocator.themeImagesDirectory.appendingPathComponent(lastComponent)
-            if FileManager.default.fileExists(atPath: builtin.path) {
-                backgroundImageURL = builtin
-                return
-            }
-        }
-        let user = userThemeImagesDirectory.appendingPathComponent(lastComponent)
-        backgroundImageURL = FileManager.default.fileExists(atPath: user.path) ? user : nil
+    /// 外观固定为 Apple Music 配色，只随系统明暗切换；`current` 主题仅用于数据兼容与主题编辑器。
+    private func buildColors() -> AppColors {
+        AppColors.appleMusic(isDark: systemIsDark)
     }
 }

@@ -20,16 +20,26 @@ struct ListPickerSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(colors.border)
             ScrollView {
-                LazyVStack(spacing: 2) {
-                    ForEach(app.allLists) { list in
-                        listRow(list)
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(app.allLists.enumerated()), id: \.element.id) { index, list in
+                        ListPickerRow(
+                            name: list.name,
+                            subtitle: ListIDs.isBuiltin(list.id) ? "内置列表" : "用户列表",
+                            count: app.musicCounts[list.id] ?? 0,
+                            symbol: icon(for: list.id)
+                        ) {
+                            app.addMusics(musics, to: list.id)
+                            dismiss()
+                        }
+                        if index < app.allLists.count - 1 {
+                            colors.border.frame(height: 1).padding(.leading, 54)
+                        }
                     }
                 }
-                .padding(8)
+                .padding(.vertical, 6)
             }
-            Divider().overlay(colors.border)
+            .background(colors.groupedBackground)
             newListBar
         }
         .frame(width: 420, height: 470)
@@ -37,83 +47,47 @@ struct ListPickerSheet: View {
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(MeloFont.sectionTitle)
                     .foregroundStyle(colors.font)
                 Text("选择目标列表；已收藏的歌曲可重复添加或加入「我的收藏」")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
+            Spacer(minLength: 8)
+            Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 24, height: 24)
-                    .background(colors.fontTertiary.opacity(0.10), in: Circle())
+                    .frame(width: 22, height: 22)
+                    .background(colors.chipFill, in: Circle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
-    private func listRow(_ list: ListInfo) -> some View {
-        Button {
-            app.addMusics(musics, to: list.id)
-            dismiss()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icon(for: list.id))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(colors.primary)
-                    .frame(width: 20)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(list.name)
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(colors.font)
-                        .lineLimit(1)
-                    Text(ListIDs.isBuiltin(list.id) ? "内置列表" : "用户列表")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(colors.fontTertiary)
-                }
-                Spacer(minLength: 8)
-                Text("\(app.musicCounts[list.id] ?? 0)")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(colors.fontTertiary)
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(colors.primary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
+        .background(colors.mainBackground)
     }
 
     private var newListBar: some View {
         HStack(spacing: 8) {
-            Image(systemName: "plus")
-                .font(.system(size: 10))
-                .foregroundStyle(colors.fontTertiary)
             TextField("新建列表名称…", text: $newListName)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(MeloFont.body)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
                 .onSubmit(createList)
             Button("新建并添加", action: createList)
-                .buttonStyle(.borderedProminent)
-                .tint(colors.primary)
-                .controlSize(.small)
+                .buttonStyle(.meloPrimary)
                 .disabled(newListName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 14)
+        .background(colors.mainBackground)
     }
 
     private func createList() {
@@ -133,5 +107,54 @@ struct ListPickerSheet: View {
         case ListIDs.temp: return "clock"
         default: return "list.bullet"
         }
+    }
+}
+
+private struct ListPickerRow: View {
+    let name: String
+    let subtitle: String
+    let count: Int
+    let symbol: String
+    let action: () -> Void
+
+    @Environment(\.meloColors) private var colors
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(colors.font)
+                    .frame(width: 28, height: 28)
+                    .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(MeloFont.body)
+                        .foregroundStyle(colors.font)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(MeloFont.microCaption)
+                        .foregroundStyle(colors.fontTertiary)
+                }
+                Spacer(minLength: 10)
+                Text("\(count)")
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
+                    .monospacedDigit()
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(colors.primary)
+                    .opacity(hovering ? 1 : 0)
+                    .frame(width: 16)
+            }
+            .padding(.horizontal, MeloMetrics.pageInset)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(hovering ? colors.hover : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
     }
 }

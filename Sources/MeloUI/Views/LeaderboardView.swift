@@ -78,23 +78,25 @@ struct LeaderboardView: View {
             } label: {
                 HStack(spacing: 5) {
                     Text(currentSourceName)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(MeloFont.controlLabel)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundStyle(colors.fontSecondary)
-                .padding(.horizontal, 10)
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                .background(colors.chipFill, in: Capsule())
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
             .fixedSize()
 
             MeloIconButton(systemName: "arrow.clockwise", help: "重新加载榜单") {
                 Task { await app.loadLeaderboards() }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 16)
         .padding(.bottom, 12)
     }
@@ -112,8 +114,8 @@ struct LeaderboardView: View {
         VStack(spacing: 10) {
             ProgressView()
             Text("正在加载榜单…")
-                .font(.system(size: 11))
-                .foregroundStyle(colors.fontSecondary)
+                .font(MeloFont.caption)
+                .foregroundStyle(colors.fontTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -122,59 +124,35 @@ struct LeaderboardView: View {
 
     private var boardList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("全部榜单")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(colors.fontTertiary)
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
+            MeloSectionHeader(title: "全部榜单")
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
             ScrollView {
-                LazyVStack(spacing: 2) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 120), spacing: MeloMetrics.gridSpacing)],
+                    alignment: .leading,
+                    spacing: MeloMetrics.gridSpacing
+                ) {
                     ForEach(app.leaderboards) { board in
-                        boardRow(board)
+                        MeloCoverCard(
+                            title: board.name,
+                            subtitle: board.total.map { "\($0) 首" },
+                            cover: board.imgUrl,
+                            isSelected: app.selectedLeaderboardId == board.id
+                        ) {
+                            guard app.selectedLeaderboardId != board.id else { return }
+                            Task { await app.selectLeaderboard(board) }
+                        }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 10)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 16)
             }
         }
-        .frame(width: 230)
-        .background(colors.mainBackground.opacity(colors.isDark ? 0.35 : 0.45))
-    }
-
-    private func boardRow(_ board: LeaderboardInfo) -> some View {
-        let isSelected = app.selectedLeaderboardId == board.id
-        return Button {
-            guard app.selectedLeaderboardId != board.id else { return }
-            Task { await app.selectLeaderboard(board) }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: isSelected ? "chart.bar.fill" : "chart.bar")
-                    .font(.system(size: 11))
-                    .foregroundStyle(isSelected ? colors.primary : colors.fontTertiary)
-                    .frame(width: 16)
-                Text(board.name)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(colors.font)
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                if let total = board.total {
-                    Text("\(total)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(colors.fontTertiary)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .background(
-                isSelected ? colors.selected : Color.clear,
-                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-            )
-        }
-        .buttonStyle(.plain)
+        .frame(width: 300)
+        .background(colors.groupedBackground)
     }
 
     // MARK: 歌曲面板
@@ -187,8 +165,8 @@ struct LeaderboardView: View {
                 VStack(spacing: 10) {
                     ProgressView()
                     Text("正在加载歌曲…")
-                        .font(.system(size: 11))
-                        .foregroundStyle(colors.fontSecondary)
+                        .font(MeloFont.caption)
+                        .foregroundStyle(colors.fontTertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = app.leaderboardError, page.list.isEmpty {

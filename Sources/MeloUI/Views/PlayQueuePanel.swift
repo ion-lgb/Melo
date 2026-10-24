@@ -38,7 +38,6 @@ struct PlayQueuePanel: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(colors.border)
             if queue.isEmpty {
                 emptyState
             } else {
@@ -47,7 +46,7 @@ struct PlayQueuePanel: View {
             Divider().overlay(colors.border)
             footer
         }
-        .frame(width: 400, height: 480)
+        .frame(width: 420, height: 500)
         .background(colors.mainBackground)
         .alert("清空播放队列", isPresented: $showClearConfirm) {
             Button(Localizer.tr("btn_cancel"), role: .cancel) {}
@@ -63,33 +62,29 @@ struct PlayQueuePanel: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "list.bullet")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(colors.primary)
-            Text("播放队列")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(colors.font)
-            Text("\(queue.count)")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(colors.fontTertiary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+            VStack(alignment: .leading, spacing: 1) {
+                Text("播放队列")
+                    .font(MeloFont.sectionTitle)
+                    .foregroundStyle(colors.font)
+                Text("共 \(queue.count) 首")
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
+            }
             Spacer()
 
             Menu {
                 PlayModeMenuItems(app: app)
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: app.playMode.systemImage)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                     Text(app.playMode.label)
-                        .font(.system(size: 10))
+                        .font(MeloFont.controlLabel)
                 }
-                .foregroundStyle(colors.fontSecondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(colors.chipFill, in: Capsule())
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -100,10 +95,8 @@ struct PlayQueuePanel: View {
                 showClearConfirm = true
             } label: {
                 Label("清空队列", systemImage: "trash")
-                    .font(.system(size: 10))
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(.meloSecondary)
             .disabled(queue.isEmpty)
             .help("停止播放并清空队列")
 
@@ -111,14 +104,15 @@ struct PlayQueuePanel: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(colors.fontTertiary)
-                    .frame(width: 18, height: 18)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(colors.fontSecondary)
+                    .frame(width: 22, height: 22)
+                    .background(colors.hover, in: Circle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 14)
     }
 
     // MARK: 列表
@@ -130,12 +124,9 @@ struct PlayQueuePanel: View {
                     ForEach(Array(queue.enumerated()), id: \.offset) { index, music in
                         queueRow(index: index, music: music)
                             .id(index)
-                        if index < queue.count - 1 {
-                            Divider().overlay(colors.border.opacity(0.6))
-                        }
                     }
                 }
-                .padding(.vertical, 3)
+                .padding(.vertical, 4)
             }
             .onAppear {
                 proxy.scrollTo(app.playQueueIndex, anchor: .center)
@@ -150,30 +141,30 @@ struct PlayQueuePanel: View {
 
     private func queueRow(index: Int, music: MusicInfo) -> some View {
         let isCurrent = index == app.playQueueIndex
-        return HStack(spacing: 8) {
+        return HStack(spacing: 10) {
             Group {
                 if isCurrent {
                     Image(systemName: app.isPlaying ? "speaker.wave.2.fill" : "speaker.fill")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(colors.primary)
                 } else {
                     Text("\(index + 1)")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(MeloFont.caption.monospacedDigit())
                         .foregroundStyle(colors.fontTertiary)
                 }
             }
-            .frame(width: 18)
+            .frame(width: 20)
 
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
                     Text(music.name)
-                        .font(.system(size: 11.5, weight: isCurrent ? .semibold : .regular))
+                        .font(MeloFont.body.weight(isCurrent ? .semibold : .regular))
                         .foregroundStyle(isCurrent ? colors.primary : colors.font)
                         .lineLimit(1)
                     QualityBadges(music: music)
                 }
                 Text(music.singer.isEmpty ? "—" : music.singer)
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontSecondary)
                     .lineLimit(1)
             }
@@ -196,11 +187,13 @@ struct PlayQueuePanel: View {
                 }
                 .disabled(queue.count <= 1)
             }
-            .opacity(hoveringIndex == index ? 1 : 0.55)
+            .opacity(hoveringIndex == index ? 1 : 0.5)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(rowBackground(index: index, isCurrent: isCurrent))
+        .padding(.horizontal, MeloMetrics.pageInset - 4)
+        .padding(.vertical, 7)
+        .frame(minHeight: MeloMetrics.rowHeight)
+        .background(rowBackground(index: index, isCurrent: isCurrent), in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
+        .padding(.horizontal, 8)
         .contentShape(Rectangle())
         .onHover { hovering in
             if hovering {
@@ -225,7 +218,7 @@ struct PlayQueuePanel: View {
     }
 
     private func rowBackground(index: Int, isCurrent: Bool) -> Color {
-        if isCurrent { return colors.primary.opacity(0.10) }
+        if isCurrent { return colors.selected }
         if hoveringIndex == index { return colors.hover }
         return .clear
     }
@@ -233,9 +226,9 @@ struct PlayQueuePanel: View {
     private func actionButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(colors.fontSecondary)
-                .frame(width: 20, height: 20)
+                .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -245,55 +238,55 @@ struct PlayQueuePanel: View {
     // MARK: 空态 / 底部
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "list.bullet.rectangle")
-                .font(.system(size: 30, weight: .light))
-                .foregroundStyle(colors.fontTertiary.opacity(0.6))
+        VStack(spacing: 12) {
+            ZStack {
+                Circle().fill(colors.chipFill).frame(width: 66, height: 66)
+                Image(systemName: "list.bullet.rectangle")
+                    .font(.system(size: 26, weight: .ultraLight))
+                    .foregroundStyle(colors.fontTertiary)
+            }
             Text("播放队列为空")
-                .font(.system(size: 13, weight: .semibold))
+                .font(MeloFont.sectionTitle)
                 .foregroundStyle(colors.font)
             Text("从任意列表或搜索结果播放歌曲后，队列会显示在这里。")
-                .font(.system(size: 10.5))
+                .font(MeloFont.secondary)
                 .foregroundStyle(colors.fontSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 260)
+                .frame(maxWidth: 280)
             Button {
                 app.route = .search
                 dismiss()
             } label: {
                 Label("去搜索歌曲", systemImage: "magnifyingglass")
-                    .font(.system(size: 11))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
-            .controlSize(.small)
+            .buttonStyle(.meloPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .padding(28)
     }
 
     private var footer: some View {
         HStack(spacing: 8) {
             if queue.indices.contains(app.playQueueIndex) {
                 Image(systemName: app.isPlaying ? "music.note" : "pause.fill")
-                    .font(.system(size: 9))
-                    .foregroundStyle(colors.fontTertiary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(colors.primary)
                 Text("当前：\(queue[app.playQueueIndex].name)")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontSecondary)
                     .lineLimit(1)
             } else {
                 Text("队列共 \(queue.count) 首")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
             Text("列表循环/随机等模式可在标题栏切换")
-                .font(.system(size: 9))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 10)
     }
 }

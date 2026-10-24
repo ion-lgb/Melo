@@ -10,10 +10,10 @@ struct CoverImage: View {
     let urlString: String?
     let width: CGFloat?
     let height: CGFloat?
-    var cornerRadius: CGFloat = 6
+    var cornerRadius: CGFloat = MeloMetrics.coverRadius
     private var sizingHint: CGFloat = 26
 
-    init(urlString: String?, size: CGFloat, cornerRadius: CGFloat = 6) {
+    init(urlString: String?, size: CGFloat, cornerRadius: CGFloat = MeloMetrics.coverRadius) {
         self.urlString = urlString
         self.width = size
         self.height = size
@@ -21,7 +21,7 @@ struct CoverImage: View {
         self.sizingHint = size
     }
 
-    init(urlString: String?, width: CGFloat?, height: CGFloat?, cornerRadius: CGFloat = 6, sizingHint: CGFloat = 26) {
+    init(urlString: String?, width: CGFloat?, height: CGFloat?, cornerRadius: CGFloat = MeloMetrics.coverRadius, sizingHint: CGFloat = 26) {
         self.urlString = urlString
         self.width = width
         self.height = height
@@ -50,7 +50,7 @@ struct CoverImage: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(colors.primaryOpacity(0.12))
+                .fill(colors.chipFill)
 
             if let localImage {
                 Image(nsImage: localImage)
@@ -73,16 +73,12 @@ struct CoverImage: View {
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(colors.border, lineWidth: 0.5)
-        )
         .task(id: localPath) { loadLocalImage() }
     }
 
     private var placeholder: some View {
         Image(systemName: "music.note")
-            .font(.system(size: max(10, sizingHint * 0.34), weight: .medium))
+            .font(.system(size: max(10, sizingHint * 0.34), weight: .regular))
             .foregroundStyle(colors.fontTertiary)
     }
 
@@ -110,11 +106,12 @@ struct MeloIconButton: View {
     let systemName: String
     var help: String?
     var isActive: Bool = false
-    var size: CGFloat = 13
-    var frameSize: CGFloat = 26
+    var size: CGFloat = 14
+    var frameSize: CGFloat = 28
     var action: () -> Void
 
     @Environment(\.meloColors) private var colors
+    @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
@@ -122,14 +119,12 @@ struct MeloIconButton: View {
                 .font(.system(size: size, weight: .medium))
                 .foregroundStyle(isActive ? colors.primary : colors.fontSecondary)
                 .frame(width: frameSize, height: frameSize)
-                .contentShape(Rectangle())
-                .background(
-                    isActive ? colors.primaryOpacity(0.14) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                )
+                .background(hovering ? colors.hover : Color.clear, in: Circle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .help(help ?? "")
+        .onHover { hovering = $0 }
     }
 }
 
@@ -146,11 +141,11 @@ struct MeloBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(color)
-            .padding(.horizontal, 4.5)
+            .padding(.horizontal, 5)
             .padding(.vertical, 1.5)
-            .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
             .lineLimit(1)
     }
 }
@@ -166,19 +161,19 @@ struct QualityBadges: View {
         let keys = Set(music.qualityBadges)
         if keys.contains("flac24bit") || keys.contains("ape") || keys.contains("wav") {
             if keys.contains("flac24bit") {
-                result.append(("24BIT", colors.badgePrimary))
+                result.append(("24BIT", colors.badgeSecondary))
             } else {
-                result.append(("无损", colors.badgePrimary))
+                result.append(("无损", colors.badgeSecondary))
             }
         } else if keys.contains("flac") {
-            result.append(("无损", colors.badgePrimary))
+            result.append(("无损", colors.badgeSecondary))
         } else if keys.contains("320k") || keys.contains("192k") {
             result.append((Localizer.tr("tag__high_quality"), colors.badgeSecondary))
         }
         if !music.isLocal, !music.source.isEmpty {
-            result.append((music.source.uppercased(), colors.badgeTertiary))
+            result.append((music.source.uppercased(), colors.badgeSecondary))
         } else if music.isLocal {
-            result.append(("本地", colors.badgeTertiary))
+            result.append(("本地", colors.badgeSecondary))
         }
         return result
     }
@@ -208,29 +203,27 @@ struct EmptyStateView: View {
         // 后者会让 NavigationSplitView 的 detail 列在测量理想尺寸时报告无限大，
         // 导致 macOS 上侧边栏/页面头部被挤到不可见区域。
         GeometryReader { proxy in
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(colors.primaryOpacity(0.08)).frame(width: 72, height: 72)
+                    Circle().fill(colors.chipFill).frame(width: 84, height: 84)
                     Image(systemName: systemImage)
-                        .font(.system(size: 30, weight: .light))
+                        .font(.system(size: 32, weight: .ultraLight))
                         .foregroundStyle(colors.fontTertiary)
                 }
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(colors.fontSecondary)
+                    .font(MeloFont.sectionTitle)
+                    .foregroundStyle(colors.font)
                 if let message {
                     Text(message)
-                        .font(.system(size: 11))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontTertiary)
                         .multilineTextAlignment(.center)
-                        .frame(maxWidth: 360)
+                        .frame(maxWidth: 380)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let actionTitle, let action {
                     Button(actionTitle, action: action)
-                        .buttonStyle(.borderedProminent)
-                        .tint(colors.primary)
-                        .controlSize(.regular)
+                        .buttonStyle(MeloCapsuleButtonStyle())
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
@@ -248,24 +241,21 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(colors.primary)
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.9))
             Text(message)
-                .font(.system(size: 12))
-                .foregroundStyle(colors.font)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white)
                 .lineLimit(2)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(
-            colors.mainBackground.opacity(0.96),
-            in: Capsule(style: .continuous)
+            Color(.sRGB, red: 0.16, green: 0.16, blue: 0.18, opacity: 0.94),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
-        .overlay(
-            Capsule(style: .continuous).strokeBorder(colors.border, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.28), radius: 16, y: 6)
     }
 }
 
@@ -278,31 +268,28 @@ struct MeloLoadingView: View {
 
     var body: some View {
         ZStack {
-            ThemeBackground(colors: app.appColors, imageURL: app.theme.backgroundImageURL)
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle().fill(colors.primaryOpacity(0.14)).frame(width: 76, height: 76)
-                    Image(systemName: "music.note")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(colors.primary)
-                }
+            ThemeBackground(colors: app.appColors)
+            VStack(spacing: 18) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 88, height: 88)
+                    .meloCoverShadow(intensity: 0.8)
                 Text("Melo")
-                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(colors.font)
                 if let error = app.bootstrapError {
                     Text("启动失败：\(error)")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.red)
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(colors.primary)
                         .frame(maxWidth: 420)
                         .multilineTextAlignment(.center)
                     Button("重试") { app.bootstrap() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(colors.primary)
+                        .buttonStyle(MeloCapsuleButtonStyle())
                 } else {
                     ProgressView()
                         .controlSize(.small)
                     Text(app.libraryError ?? "正在加载曲库与设置…")
-                        .font(.system(size: 11))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontSecondary)
                 }
             }

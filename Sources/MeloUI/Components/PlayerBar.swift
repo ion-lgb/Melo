@@ -5,13 +5,14 @@ import MeloCore
 
 // MARK: - 底部播放条
 
+/// Apple Music 式播放条：材质底 + 顶部发丝线，三栏布局
+/// （左：封面与曲目信息；中：纯字形传输控件 + 细进度条；右：功能与音量）。
 struct PlayerBar: View {
     let app: AppModel
 
     @Environment(\.meloColors) private var colors
     @Environment(\.openWindow) private var openWindow
 
-    @State private var showVolume = false
     @State private var showQueue = false
     @State private var scrubTime: Double?
     @State private var showSoundEffect = false
@@ -22,16 +23,15 @@ struct PlayerBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Rectangle().fill(colors.border).frame(height: 1)
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 nowPlaying
                 transport
-                progress
                 utilities
             }
-            .padding(.horizontal, 16)
-            .frame(height: 72)
-            .background(colors.mainBackground.opacity(colors.isDark ? 0.80 : 0.90))
+            .padding(.horizontal, 14)
+            .frame(height: MeloMetrics.playerBarHeight)
         }
+        .background(MeloMaterial.bar.ignoresSafeArea(edges: .bottom))
         .sheet(isPresented: $showSoundEffect) {
             SoundEffectPanel(app: app)
         }
@@ -44,7 +44,8 @@ struct PlayerBar: View {
 
     private var nowPlaying: some View {
         HStack(spacing: 10) {
-            CoverImage(urlString: app.currentMusic?.picUrl, size: 48, cornerRadius: 7)
+            CoverImage(urlString: app.currentMusic?.picUrl, size: 48, cornerRadius: MeloMetrics.coverRadius)
+                .meloCoverShadow(intensity: 0.7)
                 .overlay(alignment: .bottomTrailing) {
                     if app.isResolvingMusic {
                         ProgressView()
@@ -59,32 +60,37 @@ struct PlayerBar: View {
                 }
                 .help("打开播放详情")
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(app.currentMusic?.name ?? "未在播放")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(colors.font)
-                        .lineLimit(1)
-                    if let music = app.currentMusic {
-                        Button {
-                            app.toggleFavorite(music)
-                        } label: {
-                            Image(systemName: app.isFavorite(music) ? "heart.fill" : "heart")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(app.isFavorite(music) ? colors.primary : colors.fontTertiary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(app.isFavorite(music) ? Localizer.tr("setting__hot_key_player_music_unlove") : "收藏到「我的收藏」")
-                    }
-                }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(app.currentMusic?.name ?? "未在播放")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(app.currentMusic == nil ? colors.fontTertiary : colors.font)
+                    .lineLimit(1)
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontSecondary)
                     .lineLimit(1)
             }
-            .frame(minWidth: 150, alignment: .leading)
+
+            if app.currentMusic != nil {
+                Button {
+                    app.toggleFavorite(app.currentMusic!)
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(isFavorite ? colors.primary : colors.fontTertiary)
+                }
+                .buttonStyle(.plain)
+                .help(isFavorite ? Localizer.tr("setting__hot_key_player_music_unlove") : "收藏到「我的收藏」")
+            }
+
+            Spacer(minLength: 0)
         }
-        .frame(minWidth: 220, idealWidth: 260, maxWidth: 300, alignment: .leading)
+        .frame(minWidth: 240, idealWidth: 280, maxWidth: 340, alignment: .leading)
+    }
+
+    private var isFavorite: Bool {
+        guard let music = app.currentMusic else { return false }
+        return app.isFavorite(music)
     }
 
     private var subtitle: String {
@@ -93,13 +99,12 @@ struct PlayerBar: View {
         }
         var parts: [String] = []
         if !music.singer.isEmpty { parts.append(music.singer) }
-        if !music.albumName.isEmpty { parts.append(music.albumName) }
         if app.playbackError != nil {
-            parts.append("⚠️ 播放错误")
+            parts.append("播放错误")
         } else if playerStatusText != nil {
             parts.append(playerStatusText!)
         }
-        return parts.joined(separator: " · ")
+        return parts.isEmpty ? " " : parts.joined(separator: " – ")
     }
 
     private var playerStatusText: String? {
@@ -112,46 +117,62 @@ struct PlayerBar: View {
         }
     }
 
-    // MARK: 传输控制
+    // MARK: 传输控制（居中）
 
     private var transport: some View {
-        HStack(spacing: 8) {
-            MeloIconButton(systemName: "backward.fill", help: Localizer.tr("player__prev"), size: 13, frameSize: 28) {
-                app.previous()
-            }
-            .disabled(app.playQueue.isEmpty)
-
-            Button {
-                app.togglePlayPause()
-            } label: {
-                ZStack {
-                    Circle().fill(colors.primary.opacity(app.currentMusic == nil ? 0.35 : 1))
-                    Image(systemName: app.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                        .offset(x: app.isPlaying ? 0 : 1)
+        VStack(spacing: 1) {
+            HStack(spacing: 26) {
+                Button {
+                    app.previous()
+                } label: {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(app.playQueue.isEmpty ? colors.fontTertiary : colors.font)
+                        .frame(width: 30, height: 22)
+                        .contentShape(Rectangle())
                 }
-                .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
-            .disabled(app.currentMusic == nil)
-            .help(app.isPlaying ? Localizer.tr("player__pause") : Localizer.tr("list__play"))
+                .buttonStyle(.plain)
+                .disabled(app.playQueue.isEmpty)
+                .help(Localizer.tr("player__prev"))
 
-            MeloIconButton(systemName: "forward.fill", help: Localizer.tr("player__next"), size: 13, frameSize: 28) {
-                app.next()
+                Button {
+                    app.togglePlayPause()
+                } label: {
+                    Image(systemName: app.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 19))
+                        .foregroundStyle(app.currentMusic == nil ? colors.fontTertiary : colors.font)
+                        .frame(width: 34, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(app.currentMusic == nil)
+                .help(app.isPlaying ? Localizer.tr("player__pause") : Localizer.tr("list__play"))
+
+                Button {
+                    app.next()
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(app.playQueue.isEmpty ? colors.fontTertiary : colors.font)
+                        .frame(width: 30, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(app.playQueue.isEmpty)
+                .help(Localizer.tr("player__next"))
             }
-            .disabled(app.playQueue.isEmpty)
+
+            scrubber
         }
+        .frame(maxWidth: .infinity)
     }
 
-    // MARK: 进度
-
-    private var progress: some View {
-        HStack(spacing: 8) {
+    private var scrubber: some View {
+        HStack(spacing: 10) {
             Text(MeloUtils.formatTime(scrubTime ?? app.currentTime))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(colors.fontSecondary)
-                .frame(width: 42, alignment: .trailing)
+                .font(MeloFont.timecode)
+                .foregroundStyle(colors.fontTertiary)
+                .frame(width: 40, alignment: .trailing)
 
             Slider(
                 value: Binding(
@@ -166,42 +187,43 @@ struct PlayerBar: View {
                     }
                 }
             )
-            .controlSize(.small)
+            .controlSize(.mini)
             .tint(colors.primary)
             .disabled(app.duration <= 0)
 
             Text(MeloUtils.formatTime(app.duration))
-                .font(.system(size: 10, design: .monospaced))
+                .font(MeloFont.timecode)
                 .foregroundStyle(colors.fontTertiary)
-                .frame(width: 42, alignment: .leading)
+                .frame(width: 40, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 26)
     }
 
     // MARK: 工具区
 
     private var utilities: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             playModeButton
             queueButton
-            volumeButton
             rateMenu
             qualityMenu
+            volumeControl
             MeloIconButton(
                 systemName: "slider.horizontal.3",
                 help: "音效（10 段 EQ / 变速变调）",
-                isActive: hasSoundEffects
+                isActive: hasSoundEffects,
+                frameSize: 28
             ) {
                 showSoundEffect = true
             }
             MeloIconButton(
                 systemName: app.settings.bool(SettingKeys.desktopLyricEnable) ? "text.bubble.fill" : "text.bubble",
                 help: "桌面歌词",
-                isActive: app.settings.bool(SettingKeys.desktopLyricEnable)
+                isActive: app.settings.bool(SettingKeys.desktopLyricEnable),
+                frameSize: 28
             ) {
                 toggleDesktopLyric()
             }
-            MeloIconButton(systemName: "chevron.up", help: "播放详情", size: 12) {
+            MeloIconButton(systemName: "chevron.up", help: "播放详情", size: 12, frameSize: 26) {
                 if app.currentMusic != nil { app.openPlayDetail() }
             }
             .disabled(app.currentMusic == nil)
@@ -213,9 +235,9 @@ struct PlayerBar: View {
             app.cyclePlayMode()
         } label: {
             Image(systemName: app.playMode.systemImage)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(app.playMode == .none ? colors.fontTertiary : colors.fontSecondary)
-                .frame(width: 26, height: 26)
+                .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -230,18 +252,16 @@ struct PlayerBar: View {
             showQueue.toggle()
         } label: {
             Image(systemName: "list.bullet")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(colors.fontSecondary)
-                .frame(width: 26, height: 26)
+                .frame(width: 28, height: 28)
                 .overlay(alignment: .topTrailing) {
                     if !app.playQueue.isEmpty {
                         Text("\(app.playQueue.count)")
-                            .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 8))
+                            .monospacedDigit()
                             .foregroundStyle(colors.primary)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 0.5)
-                            .background(colors.primary.opacity(0.12), in: Capsule())
-                            .offset(x: 4, y: -2)
+                            .offset(x: 2, y: -3)
                     }
                 }
                 .contentShape(Rectangle())
@@ -260,47 +280,31 @@ struct PlayerBar: View {
         return "speaker.wave.2.fill"
     }
 
-    private var volumeButton: some View {
-        Button {
-            showVolume.toggle()
-        } label: {
-            Image(systemName: volumeIcon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(colors.fontSecondary)
-                .frame(width: 26, height: 26)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("音量")
-        .popover(isPresented: $showVolume, arrowEdge: .bottom) {
-            HStack(spacing: 10) {
-                Button {
-                    app.toggleMute()
-                } label: {
-                    Image(systemName: app.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(colors.fontSecondary)
-                        .frame(width: 20)
-                }
-                .buttonStyle(.plain)
-
-                Slider(
-                    value: Binding(
-                        get: { app.volume },
-                        set: { app.setVolume($0) }
-                    ),
-                    in: 0...1
-                )
-                .controlSize(.small)
-                .tint(colors.primary)
-                .frame(width: 140)
-
-                Text("\(Int((app.volume * 100).rounded()))%")
-                    .font(.system(size: 10, design: .monospaced))
+    /// Apple Music 式内联音量条：点击图标静音，拖动滑块调音量
+    private var volumeControl: some View {
+        HStack(spacing: 4) {
+            Button {
+                app.toggleMute()
+            } label: {
+                Image(systemName: volumeIcon)
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(colors.fontSecondary)
-                    .frame(width: 34, alignment: .trailing)
+                    .frame(width: 26, height: 28)
+                    .contentShape(Rectangle())
             }
-            .padding(14)
+            .buttonStyle(.plain)
+            .help(app.isMuted ? "取消静音" : "静音")
+
+            Slider(
+                value: Binding(
+                    get: { app.volume },
+                    set: { app.setVolume($0) }
+                ),
+                in: 0...1
+            )
+            .controlSize(.mini)
+            .tint(colors.fontSecondary)
+            .frame(width: 62)
         }
     }
 
@@ -318,12 +322,19 @@ struct PlayerBar: View {
                 }
             }
         } label: {
-            Text(rateLabel(app.playbackRate))
-                .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                .foregroundStyle(colors.fontSecondary)
-                .frame(width: 38)
+            HStack(spacing: 2) {
+                Text(rateLabel(app.playbackRate))
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+            }
+            .foregroundStyle(colors.fontSecondary)
+            .frame(width: 40)
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
         .fixedSize()
         .help("播放速度")
     }
@@ -343,12 +354,20 @@ struct PlayerBar: View {
                 }
             }
         } label: {
-            Text(isCurrentMusicLocal ? "本地" : qualityLabel(currentQuality))
-                .font(.system(size: 10.5, weight: .medium))
-                .foregroundStyle(isCurrentMusicLocal ? colors.badgeTertiary : colors.fontSecondary)
-                .frame(width: 40)
+            HStack(spacing: 2) {
+                Text(isCurrentMusicLocal ? "本地" : qualityLabel(currentQuality))
+                    .font(.system(size: 11))
+                if !isCurrentMusicLocal {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 7, weight: .semibold))
+                }
+            }
+            .foregroundStyle(isCurrentMusicLocal ? colors.badgeSecondary : colors.fontSecondary)
+            .frame(width: 44)
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
         .fixedSize()
         .disabled(isCurrentMusicLocal)
         .help(isCurrentMusicLocal ? "本地音乐无需选择音质" : "默认播放音质")

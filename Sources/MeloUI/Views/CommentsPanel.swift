@@ -86,16 +86,15 @@ struct CommentsPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             if expanded {
-                Divider().overlay(Color.white.opacity(0.10))
                 content
-                    .frame(height: 232)
+                    .frame(height: 260)
             }
         }
-        .background(Color.white.opacity(expanded ? 0.055 : 0.04), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.cardFill, in: RoundedRectangle(cornerRadius: MeloMetrics.cardRadius, style: .continuous))
+        .shadow(color: colors.cardShadow, radius: 6, x: 0, y: 2)
         .task(id: app.currentMusic?.id) {
             guard preview == nil else { return }
             guard expanded, let _ = app.currentMusic else { return }
@@ -113,49 +112,41 @@ struct CommentsPanel: View {
     // MARK: 头部
 
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Button {
                 withAnimation(.easeInOut(duration: 0.16)) {
                     expanded.toggle()
                 }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.4))
-                        .frame(width: 10)
-                    Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(colors.fontTertiary)
+                        .frame(width: 12)
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.primary)
                     Text("评论")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .font(MeloFont.sectionTitle)
+                        .foregroundStyle(colors.font)
                     if commentCount > 0 {
                         Text("\(commentCount)")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.45))
+                            .font(MeloFont.microCaption.monospacedDigit())
+                            .foregroundStyle(colors.fontTertiary)
                     }
                 }
             }
             .buttonStyle(.plain)
 
             if expanded {
-                HStack(spacing: 2) {
+                HStack(spacing: 4) {
                     ForEach(CommentsTab.allCases) { item in
-                        Button {
+                        MeloChip(text: item.title, isSelected: tab == item) {
                             selectTab(item)
-                        } label: {
-                            Text(item.title)
-                                .font(.system(size: 10, weight: tab == item ? .semibold : .regular))
-                                .foregroundStyle(tab == item ? Color.white : .white.opacity(0.45))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2.5)
-                                .background(tab == item ? Color.white.opacity(0.14) : Color.clear, in: Capsule())
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-                .padding(.leading, 4)
+                .padding(.leading, 6)
             }
 
             Spacer()
@@ -165,12 +156,11 @@ struct CommentsPanel: View {
             }
             if expanded, commentCount > 0 {
                 Text("共 \(commentCount) 条")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.bottom, expanded ? 10 : 0)
     }
 
     // MARK: 内容
@@ -189,61 +179,58 @@ struct CommentsPanel: View {
     }
 
     private var loadingState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             ProgressView().controlSize(.small)
             Text("正在加载评论…")
-                .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(MeloFont.secondary)
+                .foregroundStyle(colors.fontSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 8) {
             Image(systemName: "bubble.left")
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(.white.opacity(0.28))
+                .font(.system(size: 24, weight: .ultraLight))
+                .foregroundStyle(colors.fontTertiary)
             Text(tab == .hot ? "暂无热门评论" : Localizer.tr("comment__no_content"))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
+                .font(MeloFont.controlLabel)
+                .foregroundStyle(colors.font)
             Text("歌曲评论来自内置音源（网易云等支持评论的源可见）")
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(MeloFont.caption)
+                .foregroundStyle(colors.fontSecondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(10)
+        .padding(12)
     }
 
     private func errorState(_ message: String) -> some View {
         let unsupported = message.contains("不支持") || message.contains("尚未就绪")
-        return VStack(spacing: 8) {
+        return VStack(spacing: 10) {
             Image(systemName: unsupported ? "hand.raised" : "exclamationmark.triangle")
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(.system(size: 24, weight: .ultraLight))
+                .foregroundStyle(unsupported ? colors.fontTertiary : colors.badgeTertiary)
             Text(unsupported ? "当前音源暂不支持评论" : "评论加载失败")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.75))
+                .font(MeloFont.cardTitle)
+                .foregroundStyle(colors.font)
             Text(unsupported
                  ? "内置网易云等支持评论的音源才能显示评论；不影响播放、歌词与其它功能。"
                  : message)
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.4))
+                .font(MeloFont.caption)
+                .foregroundStyle(colors.fontSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 280)
+                .frame(maxWidth: 300)
             Button {
                 Task { await loadCurrentTab(reset: true) }
             } label: {
                 Label("重试", systemImage: "arrow.clockwise")
-                    .font(.system(size: 10))
             }
-            .buttonStyle(.bordered)
-            .tint(.white)
-            .controlSize(.small)
+            .buttonStyle(.meloSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(10)
+        .padding(12)
     }
 
     private var commentsList: some View {
@@ -251,7 +238,7 @@ struct CommentsPanel: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(currentComments) { comment in
                     commentRow(comment)
-                    Divider().overlay(Color.white.opacity(0.07))
+                    Divider().overlay(colors.border)
                 }
 
                 if tab == .latest {
@@ -259,12 +246,11 @@ struct CommentsPanel: View {
                 }
 
                 Text("共 \(commentsTotal > 0 ? commentsTotal : currentComments.count) 条评论 · 已加载 \(currentComments.count) 条")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 10)
             }
-            .padding(.horizontal, 10)
         }
     }
 
@@ -273,62 +259,59 @@ struct CommentsPanel: View {
             if isLoadingComments {
                 ProgressView().controlSize(.mini)
                 Text("加载中…")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
             } else if canLoadMore {
                 Button {
                     Task { await app.loadMoreComments() }
                 } label: {
                     Label("加载更多", systemImage: "arrow.down.circle")
-                        .font(.system(size: 10))
                 }
-                .buttonStyle(.bordered)
-                .tint(.white)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
             } else {
                 Text("已加载全部评论")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
             if commentsMaxPage > 0 {
                 Text("第 \(commentsPage)/\(commentsMaxPage) 页")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(MeloFont.caption.monospacedDigit())
+                    .foregroundStyle(colors.fontTertiary)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 
     private func commentRow(_ comment: CommentInfo) -> some View {
-        HStack(alignment: .top, spacing: 9) {
+        HStack(alignment: .top, spacing: 10) {
             CommentAvatar(urlString: comment.avatar)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(comment.userName.isEmpty ? "匿名用户" : comment.userName)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(MeloFont.controlLabel)
+                        .foregroundStyle(colors.font)
                         .lineLimit(1)
                     Spacer(minLength: 4)
                     Text(timeText(comment))
-                        .font(.system(size: 8.5))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .font(MeloFont.caption)
+                        .foregroundStyle(colors.fontTertiary)
                 }
 
                 if let location = comment.location, !location.isEmpty {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 7.5))
+                            .font(.system(size: 9))
                         Text(location)
-                            .font(.system(size: 8.5))
+                            .font(MeloFont.microCaption)
                     }
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(colors.fontTertiary)
                 }
 
                 Text(comment.text)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.white.opacity(0.78))
+                    .font(MeloFont.body)
+                    .foregroundStyle(colors.font)
                     .lineLimit(isExpanded(comment) ? nil : 3)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
@@ -338,8 +321,8 @@ struct CommentsPanel: View {
                         toggleExpanded(comment)
                     } label: {
                         Text(isExpanded(comment) ? "收起" : "展开")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(MeloFont.caption)
+                            .foregroundStyle(colors.primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -351,36 +334,37 @@ struct CommentsPanel: View {
                 HStack(spacing: 4) {
                     Spacer()
                     Image(systemName: "heart")
-                        .font(.system(size: 8.5))
+                        .font(.system(size: 10))
                     Text("\(comment.likedCount)")
-                        .font(.system(size: 8.5, design: .monospaced))
+                        .font(MeloFont.caption.monospacedDigit())
                 }
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(colors.fontTertiary)
             }
         }
-        .padding(.vertical, 7)
+        .padding(.vertical, 9)
     }
 
     private func replyBlock(_ reply: CommentReply) -> some View {
-        HStack(alignment: .top, spacing: 5) {
+        HStack(alignment: .top, spacing: 6) {
             Image(systemName: "arrowshape.turn.up.left")
-                .font(.system(size: 8))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(.system(size: 10))
+                .foregroundStyle(colors.fontTertiary)
                 .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("@\(reply.userName.isEmpty ? "回复" : reply.userName)")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(MeloFont.caption.weight(.medium))
+                    .foregroundStyle(colors.primary)
                 Text(reply.text)
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontSecondary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
-        .padding(6)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
     }
 
     // MARK: 动作
@@ -431,6 +415,8 @@ struct CommentsPanel: View {
 private struct CommentAvatar: View {
     let urlString: String?
 
+    @Environment(\.meloColors) private var colors
+
     private var remoteURL: URL? {
         guard let urlString, !urlString.isEmpty, let url = URL(string: urlString), MeloUtils.isHTTPURL(urlString) else {
             return nil
@@ -458,17 +444,17 @@ private struct CommentAvatar: View {
                 placeholder
             }
         }
-        .frame(width: 26, height: 26)
+        .frame(width: 30, height: 30)
         .clipShape(Circle())
-        .overlay(Circle().strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5))
+        .overlay(Circle().strokeBorder(colors.border, lineWidth: 0.5))
     }
 
     private var placeholder: some View {
         ZStack {
-            Circle().fill(Color.white.opacity(0.10))
+            Circle().fill(colors.chipFill)
             Image(systemName: "person.fill")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.45))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(colors.fontTertiary)
         }
     }
 }

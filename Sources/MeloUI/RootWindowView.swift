@@ -4,10 +4,12 @@ import MeloCore
 
 // MARK: - 主窗口根视图
 
-/// 应用主窗口：NavigationSplitView（侧边栏 + 内容区）+ 工具栏 + 底部播放条 + 播放详情覆盖层。
+/// 应用主窗口：Apple Music 式布局 —— 毛玻璃侧边栏 + 统一工具栏 + 内容区 + 底部播放条，
+/// 播放详情以沉浸式覆盖层铺满整个窗口。
 public struct RootWindowView: View {
     private let app: AppModel
     @State private var searchText: String = ""
+    @State private var searchDebounce: Task<Void, Never>?
 
     public init(app: AppModel) {
         self.app = app
@@ -40,7 +42,7 @@ public struct RootWindowView: View {
     private var mainWindow: some View {
         NavigationSplitView {
             SidebarView(app: app)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 236, max: 300)
+                .navigationSplitViewColumnWidth(min: 200, ideal: MeloMetrics.sidebarWidth, max: 320)
         } detail: {
             detailContent
         }
@@ -50,13 +52,6 @@ public struct RootWindowView: View {
                 toolbarSearchField
             }
             ToolbarItemGroup(placement: .primaryAction) {
-                Menu {
-                    themeMenuContent
-                } label: {
-                    Image(systemName: "paintpalette")
-                }
-                .help("切换主题")
-
                 Button {
                     app.route = .settings
                 } label: {
@@ -82,33 +77,44 @@ public struct RootWindowView: View {
             }
         }
         .animation(.easeInOut(duration: 0.22), value: app.isShowingPlayDetail)
+        .onChange(of: searchText) { _, newValue in
+            searchDebounce?.cancel()
+            searchDebounce = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                guard !Task.isCancelled else { return }
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    if app.route == .search { await app.performSearch("") }
+                } else {
+                    app.route = .search
+                    await app.performSearch(trimmed)
+                }
+            }
+        }
     }
 
     private var detailContent: some View {
-        ZStack {
-            ThemeBackground(colors: app.appColors, imageURL: app.theme.backgroundImageURL)
-            // 内容区半透明主背景：与原版 #right 一致（背景图主要在侧栏透出）
-            app.appColors.mainBackground
-            VStack(spacing: 0) {
-                // 页面统一放进 GeometryReader，给 ScrollView 类页面一个确定的高度上下文。
-                // 否则（手工 NSHostingView 宿主时）NavigationSplitView 会把 detail 列
-                // 按页面内容的理想高度（例如设置页 2500pt）撑开，导致上下裁切。
-                GeometryReader { proxy in
-                    pageContent
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                }
-                PlayerBar(app: app)
+        VStack(spacing: 0) {
+            // 页面统一放进 GeometryReader，给 ScrollView 类页面一个确定的高度上下文。
+            // 否则（手工 NSHostingView 宿主时）NavigationSplitView 会把 detail 列
+            // 按页面内容的理想高度（例如设置页 2500pt）撑开，导致上下裁切。
+            GeometryReader { proxy in
+                pageContent
+                    .frame(width: proxy.size.width, height: proxy.size.height)
             }
+            PlayerBar(app: app)
         }
-        .navigationTitle(windowTitle)
+        .background(app.appColors.mainBackground)
+        // 固定窗口标题：页面大标题已在内容区呈现，避免工具栏与页面标题重复。
+        .navigationTitle("Melo")
         .overlay(alignment: .top) {
             if let error = app.libraryError {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(colors.badgeTertiary)
                     Text("曲库加载异常：\(error)")
-                        .font(.system(size: 11))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.font)
                         .lineLimit(1)
                     Spacer(minLength: 8)
@@ -116,34 +122,17 @@ public struct RootWindowView: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(colors.mainBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(colors.badgeTertiary.opacity(0.4), lineWidth: 1))
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(colors.cardFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(colors.badgeTertiary.opacity(0.4), lineWidth: 1)
+                )
+                .shadow(color: colors.cardShadow, radius: 8, y: 3)
+                .padding(.horizontal, MeloMetrics.pageInset)
+                .padding(.top, 10)
             }
-        }
-    }
-
-    private var windowTitle: String {
-        switch app.route {
-        case .myList(let listId):
-            return app.listName(listId)
-        case .test:
-            return "自定义源测试"
-        case .search:
-            return app.localizer.t("search")
-        case .leaderboard:
-            return app.localizer.t("leaderboard")
-        case .songList:
-            return app.localizer.t("song_list")
-        case .songListDetail:
-            return app.songListDetail?.info.name ?? "歌单详情"
-        case .download:
-            return app.localizer.t("download")
-        case .settings:
-            return app.localizer.t("setting")
         }
     }
 
@@ -174,33 +163,29 @@ public struct RootWindowView: View {
     private var toolbarSearchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundStyle(colors.fontTertiary)
             TextField("搜索音乐、歌手…", text: $searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .frame(width: 190)
+                .font(MeloFont.body)
+                .frame(width: 200)
                 .onSubmit(submitSearch)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundStyle(colors.fontTertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
         .background(
-            colors.fontTertiary.opacity(0.10),
-            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .strokeBorder(colors.border, lineWidth: 1)
+            colors.chipFill,
+            in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
         )
     }
 
@@ -209,52 +194,6 @@ public struct RootWindowView: View {
         guard !trimmed.isEmpty else { return }
         app.route = .search
         Task { await app.performSearch(trimmed) }
-    }
-
-    // MARK: 主题菜单
-
-    @ViewBuilder
-    private var themeMenuContent: some View {
-        Button {
-            let light = app.settings.string(SettingKeys.lightThemeId) ?? "green"
-            let dark = app.settings.string(SettingKeys.darkThemeId) ?? "black"
-            app.theme.setAutoTheme(lightId: light, darkId: dark)
-        } label: {
-            if app.theme.isAutoMode {
-                Label("跟随系统（自动）", systemImage: "checkmark")
-            } else {
-                Text("跟随系统（自动）")
-            }
-        }
-
-        Divider()
-
-        ForEach(app.theme.builtinThemes) { theme in
-            Button {
-                app.setTheme(id: theme.id)
-            } label: {
-                if theme.id == app.theme.current.id {
-                    Label(theme.name, systemImage: "checkmark")
-                } else {
-                    Text(theme.name)
-                }
-            }
-        }
-
-        if !app.theme.userThemes.isEmpty {
-            Divider()
-            ForEach(app.theme.userThemes) { theme in
-                Button {
-                    app.setTheme(id: theme.id)
-                } label: {
-                    if theme.id == app.theme.current.id {
-                        Label(theme.name, systemImage: "checkmark")
-                    } else {
-                        Text(theme.name)
-                    }
-                }
-            }
-        }
     }
 
     // MARK: Toast

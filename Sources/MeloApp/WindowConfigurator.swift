@@ -194,7 +194,7 @@ struct LyricWindowConfigurator: NSViewRepresentable {
     }
 }
 
-/// 主窗口外观：隐藏标题栏、统一工具栏风格（保持系统红绿灯）。
+/// 主窗口外观：透明标题栏 + 统一工具栏，窗口本身透明以便侧边栏毛玻璃透出桌面。
 struct MainWindowConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
@@ -212,6 +212,9 @@ struct MainWindowConfigurator: NSViewRepresentable {
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
+        // Apple Music 侧边栏透出桌面：窗口不透明关闭，内容区自行铺纯色底
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.minSize = NSSize(width: 1000, height: 620)
         if window.frameAutosaveName.isEmpty {
             window.setFrameAutosaveName("MeloMainWindow")

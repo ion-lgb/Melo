@@ -220,8 +220,13 @@ struct MainWindowHost: View {
                 }
                 // 开发期：导入后自动播放第一首本地音乐
                 if ProcessInfo.processInfo.environment["MELO_PLAY_LOCAL_FIRST"] == "1" {
-                    try? await Task.sleep(nanoseconds: 800_000_000)
-                    if let local = model.currentMusics.first(where: { $0.isLocal }) {
+                    var local: MusicInfo?
+                    for _ in 0..<100 {
+                        local = model.currentMusics.first(where: { $0.isLocal })
+                        if local != nil { break }
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
+                    if let local {
                         MeloLog.info("[dev] 播放本地音乐：\(local.name) file=\(local.filePath ?? "nil")")
                         model.play(local, queue: model.currentMusics)
                     } else {
@@ -277,7 +282,9 @@ struct MainWindowHost: View {
                 }
                 // 开发期自动播放（当前列表第一首）
                 if ProcessInfo.processInfo.environment["MELO_AUTOPLAY"] == "1" {
-                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    for _ in 0..<100 where model.currentMusics.isEmpty {
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
                     if let first = model.currentMusics.first {
                         model.play(first)
                     }
@@ -289,7 +296,11 @@ struct MainWindowHost: View {
                     case "test": model.route = .test
                     case "download": model.route = .download
                     case "search": model.route = .search
+                    case "leaderboard": model.route = .leaderboard
+                    case "songList": model.route = .songList
                     case "list": model.route = .myList(listId: model.selectedListId)
+                    case "love": model.route = .myList(listId: ListIDs.love)
+                    case "temp": model.route = .myList(listId: ListIDs.temp)
                     default: break
                     }
                 }
@@ -322,13 +333,21 @@ struct MainWindowHost: View {
                 }
                 // 开发期：打开播放详情
                 if ProcessInfo.processInfo.environment["MELO_OPEN_PLAY_DETAIL"] == "1" {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    for _ in 0..<100 where model.currentMusic == nil {
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
                     model.openPlayDetail()
                 }
                 // 开发期自动打开桌面歌词窗口
                 if ProcessInfo.processInfo.environment["MELO_SHOW_LYRIC"] == "1" {
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     openWindow(id: "desktop-lyric")
+                }
+                // 开发期：UI 走查截图（无需屏幕录制权限），放在所有钩子之后
+                if let path = ProcessInfo.processInfo.environment["MELO_SNAPSHOT"], !path.isEmpty {
+                    let delay = ProcessInfo.processInfo.environment["MELO_SNAPSHOT_DELAY"]
+                    try? await Task.sleep(nanoseconds: UInt64((Double(delay ?? "") ?? 2.0) * 1_000_000_000))
+                    MainWindowSnapshot.capture(to: URL(fileURLWithPath: path))
                 }
             }
     }

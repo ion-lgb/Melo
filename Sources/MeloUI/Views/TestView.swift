@@ -22,14 +22,14 @@ struct TestView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: MeloMetrics.gridSpacing) {
                 header
                 PhaseBanner(text: "测试用源不内置：请先在「设置 → 自定义源」导入并激活你拥有的 .js 源脚本。本页调用 app.testResolve(musicInfo:) 走 musicUrl 能力取链并交给播放器；Phase 1 会接入真实搜索/列表数据。")
                 controlCard
                 jsonCard
                 resultCard
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, MeloMetrics.pageInset)
             .padding(.vertical, 20)
             .frame(maxWidth: 980, alignment: .leading)
         }
@@ -56,20 +56,21 @@ struct TestView: View {
                 app.route = .settings
             } label: {
                 Label("管理自定义源", systemImage: "puzzlepiece.extension")
-                    .font(.system(size: 11))
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.meloSecondary)
         }
+        .padding(.bottom, 4)
     }
 
     // MARK: 源与音质
 
     private var controlCard: some View {
         MeloCard(title: "源与音质", subtitle: nil, systemImage: "antenna.radiowaves.left.and.right") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 14) {
                     Text("测试音源")
-                        .font(.system(size: 12))
+                        .font(MeloFont.controlLabel)
+                        .foregroundStyle(colors.fontSecondary)
                         .frame(width: 72, alignment: .leading)
                     Picker("测试音源", selection: $presetSource) {
                         ForEach(presetSources, id: \.self) { source in
@@ -77,10 +78,18 @@ struct TestView: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 180)
+                    .pickerStyle(.menu)
+                    .menuIndicator(.visible)
+                    .buttonStyle(.plain)
+                    .tint(colors.font)
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(colors.chipFill, in: Capsule())
 
                     Text("音质")
-                        .font(.system(size: 12))
+                        .font(MeloFont.controlLabel)
+                        .foregroundStyle(colors.fontSecondary)
                         .frame(width: 44, alignment: .leading)
                     Picker("音质", selection: $selectedQuality) {
                         ForEach(qualityOptions, id: \.self) { quality in
@@ -88,10 +97,17 @@ struct TestView: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 150)
+                    .pickerStyle(.menu)
+                    .menuIndicator(.visible)
+                    .buttonStyle(.plain)
+                    .tint(colors.font)
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(colors.chipFill, in: Capsule())
 
                     Text("（音质选项来自当前活动源声明的 capabilities）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
@@ -99,20 +115,17 @@ struct TestView: View {
                 HStack(spacing: 10) {
                     Circle()
                         .fill(statusColor)
-                        .frame(width: 7, height: 7)
+                        .frame(width: 8, height: 8)
                     Text(statusText)
-                        .font(.system(size: 11))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
 
                     if app.activeCapabilities.isEmpty {
                         Button("去设置导入源") { app.route = .settings }
-                            .buttonStyle(.borderedProminent)
-                            .tint(colors.primary)
-                            .controlSize(.small)
+                            .buttonStyle(.meloPrimary)
                     } else {
                         Button("刷新源") { app.reloadSources() }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                            .buttonStyle(.meloSecondary)
                     }
                     Spacer()
                     if app.isSwitchingSource {
@@ -122,22 +135,22 @@ struct TestView: View {
 
                 if !app.activeCapabilities.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             ForEach(app.activeCapabilities, id: \.source) { cap in
-                                HStack(spacing: 5) {
+                                HStack(spacing: 6) {
                                     Text(cap.source)
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(colors.badgePrimary)
+                                        .font(MeloFont.controlLabel)
+                                        .foregroundStyle(colors.primary)
                                     Text(cap.qualitys.joined(separator: " / "))
-                                        .font(.system(size: 9.5, design: .monospaced))
+                                        .font(MeloFont.caption.monospacedDigit())
                                         .foregroundStyle(colors.fontSecondary)
                                     Text(cap.actions.joined(separator: ", "))
-                                        .font(.system(size: 9))
+                                        .font(MeloFont.caption)
                                         .foregroundStyle(colors.fontTertiary)
                                 }
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(colors.badgePrimary.opacity(0.10), in: Capsule())
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(colors.chipFill, in: Capsule())
                             }
                         }
                     }
@@ -154,7 +167,7 @@ struct TestView: View {
             subtitle: "直接编辑原版 MusicInfo 结构（id / name / singer / source / interval / meta）。meta 为宽松 JSON，可粘贴真实抓包数据。",
             systemImage: "curlybraces"
         ) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Button {
                         jsonText = TestPresets.json(for: presetSource)
@@ -162,9 +175,8 @@ struct TestView: View {
                         localError = nil
                     } label: {
                         Label("恢复预设", systemImage: "arrow.counterclockwise")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Button {
                         if let formatted = formatJSON() {
@@ -174,9 +186,8 @@ struct TestView: View {
                         }
                     } label: {
                         Label("格式化", systemImage: "text.alignleft")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Button {
                         if let music = app.currentMusic,
@@ -187,9 +198,8 @@ struct TestView: View {
                         }
                     } label: {
                         Label("使用当前播放歌曲", systemImage: "music.note")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                     .disabled(app.currentMusic == nil)
 
                     Spacer()
@@ -200,30 +210,25 @@ struct TestView: View {
                         app.showToast("已复制 JSON")
                     } label: {
                         Label("复制", systemImage: "doc.on.doc")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                 }
 
                 TextEditor(text: $jsonText)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(colors.font)
                     .scrollContentBackground(.hidden)
-                    .padding(8)
+                    .padding(10)
                     .frame(height: 240)
                     .background(
-                        colors.fontTertiary.opacity(0.06),
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(colors.border, lineWidth: 1)
+                        colors.chipFill,
+                        in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                     )
 
                 if let parsedSummary {
                     Label(parsedSummary, systemImage: "checkmark.circle")
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(colors.fontSecondary)
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(colors.primary)
                 }
             }
         }
@@ -233,16 +238,14 @@ struct TestView: View {
 
     private var resultCard: some View {
         MeloCard(title: "解析与播放", subtitle: "点击「解析并播放」后：取链 → 播放器加载 → 状态与错误会实时显示", systemImage: "waveform") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     Button {
                         resolveAndPlay()
                     } label: {
                         Label(isRunning ? "解析中…" : "解析并播放", systemImage: "play.fill")
-                            .font(.system(size: 12, weight: .medium))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.primary)
+                    .buttonStyle(.meloPrimary)
                     .disabled(isRunning || app.activeCapabilities.isEmpty)
 
                     if isRunning || app.isResolvingMusic {
@@ -253,25 +256,24 @@ struct TestView: View {
                         app.togglePlayPause()
                     } label: {
                         Label(app.isPlaying ? Localizer.tr("player__pause") : Localizer.tr("list__play"), systemImage: app.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                     .disabled(app.currentMusic == nil)
 
                     Spacer()
 
                     if app.isPlaying {
                         Label("正在播放", systemImage: "speaker.wave.2.fill")
-                            .font(.system(size: 10.5, weight: .medium))
+                            .font(MeloFont.controlLabel)
                             .foregroundStyle(colors.primary)
                     } else {
                         Text(playerStatusLabel)
-                            .font(.system(size: 10.5))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontTertiary)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     infoRow("播放状态", playerStatusLabel)
                     infoRow("当前歌曲", currentMusicLabel)
                     infoRow("播放进度", "\(MeloUtils.formatTime(app.currentTime)) / \(MeloUtils.formatTime(app.duration))")
@@ -284,21 +286,21 @@ struct TestView: View {
                         infoRow("播放器错误", playbackError, isError: true)
                     }
                 }
-                .padding(10)
+                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    colors.fontTertiary.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    colors.chipFill,
+                    in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                 )
 
                 DisclosureGroup(isExpanded: $showRawJSON) {
                     Text(app.lyric.isEmpty ? "当前无歌词数据" : "已加载歌词：主歌词 \(app.lyric.lyric.count) 字符，翻译 \(app.lyric.tlyric?.count ?? 0) 字符")
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
-                        .padding(.top, 6)
+                        .padding(.top, 8)
                 } label: {
                     Text("检查详情")
-                        .font(.system(size: 11))
+                        .font(MeloFont.controlLabel)
                 }
             }
         }
@@ -307,20 +309,20 @@ struct TestView: View {
     private func infoRow(_ title: String, _ value: String, selectable: Bool = false, isError: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(title)
-                .font(.system(size: 10, weight: .semibold))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.fontTertiary)
                 .frame(width: 70, alignment: .leading)
             if selectable {
                 Text(value)
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundStyle(isError ? .red : colors.fontSecondary)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(isError ? colors.primary : colors.fontSecondary)
                     .textSelection(.enabled)
                     .lineLimit(2)
                     .truncationMode(.middle)
             } else {
                 Text(value)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(isError ? .red : (title == "当前歌曲" ? colors.font : colors.fontSecondary))
+                    .font(MeloFont.body)
+                    .foregroundStyle(isError ? colors.primary : (title == "当前歌曲" ? colors.font : colors.fontSecondary))
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
@@ -359,9 +361,9 @@ struct TestView: View {
 
     private var statusColor: Color {
         switch app.sourceStatus {
-        case .ready: return colors.badgePrimary
+        case .ready: return colors.primary
         case .loading: return colors.badgeTertiary
-        case .error: return .red
+        case .error: return colors.badgeTertiary
         case .idle: return colors.fontTertiary
         }
     }

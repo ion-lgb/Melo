@@ -16,7 +16,6 @@ struct SearchView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            searchBar
             if app.metadataReady {
                 controls
             }
@@ -36,7 +35,7 @@ struct SearchView: View {
             PageTitle(Localizer.tr("search"), subtitle: subtitle)
             Spacer()
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 16)
         .padding(.bottom, 10)
     }
@@ -55,96 +54,37 @@ struct SearchView: View {
         return "「\(app.searchKeyword)」· 共 \(total) 条结果"
     }
 
-    // MARK: 搜索框
-
-    private var searchBar: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 7) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(colors.fontTertiary)
-                TextField("搜索歌曲、歌手、歌单…", text: $keyword)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .onSubmit(submit)
-                if !keyword.isEmpty {
-                    Button {
-                        keyword = ""
-                        selectedMusicID = nil
-                        selectedSongListID = nil
-                        Task { await app.performSearch("") }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(colors.fontTertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                colors.fontTertiary.opacity(0.10),
-                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(colors.border, lineWidth: 1)
-            )
-
-            Button(action: submit) {
-                if app.isSearching {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Text(Localizer.tr("search"))
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.primary)
-            .disabled(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
-    }
-
     // MARK: Tab + 音源
 
     private var controls: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 2) {
-                tabButton("单曲", tab: .music)
-                tabButton(Localizer.tr("song_list"), tab: .songList)
+        HStack(spacing: 12) {
+            Picker("", selection: tabBinding) {
+                Text("单曲").tag(SearchTab.music)
+                Text(Localizer.tr("song_list")).tag(SearchTab.songList)
             }
-            .padding(2)
-            .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 132)
 
             SourceChipBar(app: app, selected: app.searchSource) { source in
                 Task { await app.setSearchSource(source) }
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.bottom, 10)
     }
 
-    private func tabButton(_ title: String, tab: SearchTab) -> some View {
-        Button {
-            guard app.searchTab != tab else { return }
-            selectedMusicID = nil
-            selectedSongListID = nil
-            Task { await app.setSearchTab(tab) }
-        } label: {
-            Text(title)
-                .font(.system(size: 11, weight: app.searchTab == tab ? .semibold : .regular))
-                .foregroundStyle(app.searchTab == tab ? colors.primary : colors.fontSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(
-                    app.searchTab == tab ? colors.mainBackground : Color.clear,
-                    in: Capsule()
-                )
-        }
-        .buttonStyle(.plain)
+    private var tabBinding: Binding<SearchTab> {
+        Binding(
+            get: { app.searchTab },
+            set: { tab in
+                guard app.searchTab != tab else { return }
+                selectedMusicID = nil
+                selectedSongListID = nil
+                Task { await app.setSearchTab(tab) }
+            }
+        )
     }
 
     // MARK: 内容
@@ -166,30 +106,21 @@ struct SearchView: View {
 
     private var discoveryView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: MeloMetrics.sectionSpacing) {
                 if !app.searchHistory.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("搜索历史")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(colors.fontSecondary)
-                            Spacer()
-                            Button("清空") {
-                                app.clearSearchHistory()
-                            }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 10))
-                            .foregroundStyle(colors.fontTertiary)
-                        }
+                    VStack(alignment: .leading, spacing: 12) {
+                        MeloSectionHeader(
+                            title: "搜索历史",
+                            actionTitle: "清空",
+                            action: { app.clearSearchHistory() }
+                        )
                         chipFlow(app.searchHistory, icon: "clock")
                     }
                 }
 
                 if !app.hotSearchWords.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(Localizer.tr("search__hot_search"))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(colors.fontSecondary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        MeloSectionHeader(title: Localizer.tr("search__hot_search"))
                         chipFlow(app.hotSearchWords, icon: "flame")
                     }
                 }
@@ -201,12 +132,12 @@ struct SearchView: View {
                 )
                 .frame(height: 220)
             }
-            .padding(20)
+            .padding(MeloMetrics.pageInset)
         }
     }
 
     private func chipFlow(_ words: [String], icon: String) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], alignment: .leading, spacing: 8) {
+        MeloFlow(spacing: 8) {
             ForEach(words, id: \.self) { word in
                 Button {
                     keyword = word
@@ -214,17 +145,17 @@ struct SearchView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: icon)
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundStyle(colors.fontTertiary)
                         Text(word)
-                            .font(.system(size: 11))
-                            .foregroundStyle(colors.fontSecondary)
+                            .font(MeloFont.secondary)
+                            .foregroundStyle(colors.font)
                             .lineLimit(1)
-                        Spacer(minLength: 0)
+                            .fixedSize()
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(colors.chipFill, in: Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -313,20 +244,19 @@ struct SearchView: View {
                     }
                 }
                 ScrollView {
-                    LazyVStack(spacing: 2) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 160), spacing: MeloMetrics.gridSpacing)],
+                        alignment: .leading,
+                        spacing: MeloMetrics.gridSpacing
+                    ) {
                         ForEach(page.list) { item in
-                            SongListRow(item: item) {
+                            SongListCard(item: item) {
                                 selectedSongListID = item.id
                                 MeloUIActions.openSongList(item: item, app: app)
                             }
-                            .background(
-                                selectedSongListID == item.id ? colors.selected : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            )
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(MeloMetrics.pageInset)
                 }
                 LoadMoreBar(
                     page: page.page,
@@ -346,8 +276,8 @@ struct SearchView: View {
         VStack(spacing: 10) {
             ProgressView()
             Text("正在搜索…")
-                .font(.system(size: 11))
-                .foregroundStyle(colors.fontSecondary)
+                .font(MeloFont.caption)
+                .foregroundStyle(colors.fontTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

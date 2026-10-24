@@ -10,12 +10,18 @@ struct SongListDetailView: View {
 
     @Environment(\.meloColors) private var colors
     @State private var selectedMusicID: String?
+    @State private var heroImage: NSImage?
 
     private var detail: SongListDetail? {
         guard let detail = app.songListDetail,
               detail.info.id == id,
               detail.info.source == source else { return nil }
         return detail
+    }
+
+    private var coverURL: String? {
+        guard let cover = detail?.info.cover, !cover.isEmpty else { return nil }
+        return cover
     }
 
     private var isCurrentDetailLoaded: Bool {
@@ -33,6 +39,9 @@ struct SongListDetailView: View {
                 await app.openSongListDetail(id: id, source: source)
             }
         }
+        .task(id: coverURL) {
+            heroImage = await ArtworkImageLoader.shared.image(for: coverURL)
+        }
         .onExitCommand { goBack() }
         .onKeyPress(.delete) {
             goBack()
@@ -47,20 +56,20 @@ struct SongListDetailView: View {
             Button(action: goBack) {
                 HStack(spacing: 5) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                     Text("返回歌单广场")
-                        .font(.system(size: 11))
+                        .font(MeloFont.secondary)
                 }
-                .foregroundStyle(colors.fontSecondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .background(colors.fontTertiary.opacity(0.08), in: Capsule())
+                .foregroundStyle(colors.font)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(colors.chipFill, in: Capsule())
             }
             .buttonStyle(.plain)
             .help("返回歌单广场（Esc / Delete）")
 
             Text(detail?.info.name ?? "歌单详情")
-                .font(.system(size: 11, weight: .medium))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.fontTertiary)
                 .lineLimit(1)
 
@@ -70,7 +79,7 @@ struct SongListDetailView: View {
                 ProgressView().controlSize(.mini)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, MeloMetrics.pageInset)
         .padding(.top, 14)
         .padding(.bottom, 8)
     }
@@ -96,8 +105,8 @@ struct SongListDetailView: View {
                 VStack(spacing: 10) {
                     ProgressView()
                     Text("正在加载歌单详情…")
-                        .font(.system(size: 11))
-                        .foregroundStyle(colors.fontSecondary)
+                        .font(MeloFont.caption)
+                        .foregroundStyle(colors.fontTertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -109,77 +118,81 @@ struct SongListDetailView: View {
         }
     }
 
-    // MARK: 歌单信息
+    // MARK: 歌单信息（Apple Music 专辑页式 hero）
 
     private func infoHeader(_ info: SongListItem) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            CoverImage(urlString: info.cover, size: 132, cornerRadius: 10)
+        ZStack(alignment: .top) {
+            ArtworkTintHeader(image: heroImage)
 
-            VStack(alignment: .leading, spacing: 7) {
-                Text(info.name)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(colors.font)
-                    .lineLimit(2)
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .bottom, spacing: 22) {
+                    CoverImage(urlString: info.cover, size: 200, cornerRadius: MeloMetrics.heroCoverRadius)
+                        .meloCoverShadow(intensity: 1.4)
 
-                HStack(spacing: 8) {
-                    MeloBadge(MeloUIActions.sourceName(info.source, app: app), color: colors.badgeTertiary)
-                    if let creator = info.creator, !creator.isEmpty {
-                        Text(creator)
-                            .font(.system(size: 11))
-                            .foregroundStyle(colors.fontSecondary)
-                            .lineLimit(1)
-                    }
-                    if let playCount = MeloUIActions.formatPlayCount(info.playCount) {
-                        Text("· 播放 \(playCount)")
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(colors.fontTertiary)
-                    }
-                    if let total = info.total {
-                        Text("· \(total) 首")
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(colors.fontTertiary)
-                    }
-                }
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(info.name)
+                            .font(MeloFont.heroTitle)
+                            .foregroundStyle(colors.font)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                if let description = info.description, !description.isEmpty {
-                    Text(description)
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(colors.fontTertiary)
-                        .lineLimit(3)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                HStack(spacing: 8) {
-                    Button {
-                        playAll()
-                    } label: {
-                        Label("播放全部", systemImage: "play.fill")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.primary)
-                    .disabled(detail?.page.list.isEmpty ?? true)
-
-                    if let detail, detail.page.hasMore {
-                        Button {
-                            Task { await app.loadMoreSongListDetail() }
-                        } label: {
-                            Label("加载更多歌曲", systemImage: "arrow.down")
-                                .font(.system(size: 11))
+                        HStack(spacing: 10) {
+                            MeloBadge(MeloUIActions.sourceName(info.source, app: app), color: colors.badgePrimary)
+                            if let creator = info.creator, !creator.isEmpty {
+                                Text(creator)
+                                    .font(MeloFont.secondary)
+                                    .foregroundStyle(colors.fontSecondary)
+                                    .lineLimit(1)
+                            }
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(app.isLoadingSongListDetail)
-                    }
 
-                    Spacer()
+                        HStack(spacing: 6) {
+                            if let playCount = MeloUIActions.formatPlayCount(info.playCount) {
+                                Text("播放 \(playCount)")
+                            }
+                            if let total = info.total {
+                                Text("· \(total) 首")
+                            }
+                        }
+                        .font(MeloFont.caption)
+                        .foregroundStyle(colors.fontTertiary)
+
+                        if let description = info.description, !description.isEmpty {
+                            Text(description)
+                                .font(MeloFont.body)
+                                .foregroundStyle(colors.fontSecondary)
+                                .lineLimit(3)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                playAll()
+                            } label: {
+                                Label("播放全部", systemImage: "play.fill")
+                            }
+                            .buttonStyle(.meloPrimary)
+                            .disabled(detail?.page.list.isEmpty ?? true)
+
+                            if let detail, detail.page.hasMore {
+                                Button {
+                                    Task { await app.loadMoreSongListDetail() }
+                                } label: {
+                                    Label("加载更多歌曲", systemImage: "arrow.down")
+                                }
+                                .buttonStyle(.meloSecondary)
+                                .disabled(app.isLoadingSongListDetail)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .padding(.top, 2)
             }
-            Spacer(minLength: 0)
+            .padding(MeloMetrics.pageInset)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: 歌曲列表

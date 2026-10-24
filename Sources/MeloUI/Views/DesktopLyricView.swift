@@ -249,19 +249,19 @@ public struct DesktopLyricView: View {
         HStack(spacing: 6) {
             if let music = app.currentMusic {
                 Text(music.name)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .font(MeloFont.caption.weight(.medium))
+                    .foregroundStyle(Color.white.opacity(0.75))
                     .lineLimit(1)
                 Text("·")
-                    .foregroundStyle(Color.white.opacity(0.3))
+                    .foregroundStyle(Color.white.opacity(0.35))
                 Text(music.singer)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.5))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(Color.white.opacity(0.55))
                     .lineLimit(1)
             } else {
                 Text("未在播放")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.45))
+                    .font(MeloFont.caption)
+                    .foregroundStyle(Color.white.opacity(0.5))
             }
             Spacer(minLength: 0)
         }
@@ -285,9 +285,9 @@ public struct DesktopLyricView: View {
             }
             lyricIconButton("forward.fill", help: Localizer.tr("player__next")) { app.next() }
             Divider()
-                .frame(height: 12)
-                .overlay(Color.white.opacity(0.25))
-                .padding(.horizontal, 2)
+                .frame(height: 14)
+                .overlay(Color.white.opacity(0.28))
+                .padding(.horizontal, 3)
             lyricIconButton("macwindow", help: "打开主窗口并进入播放详情") {
                 app.openPlayDetail()
                 MeloUIWindow.activateMainWindow()
@@ -297,21 +297,36 @@ public struct DesktopLyricView: View {
                 MeloUIWindow.closeDesktopLyric()
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .background(Color.black.opacity(0.38), in: Capsule())
+        .padding(.horizontal, 7)
+        .padding(.vertical, 5)
+        .background(Color.black.opacity(0.42), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
     }
 
     private func lyricIconButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.85))
-                .frame(width: 20, height: 20)
-                .contentShape(Rectangle())
+        DesktopLyricControlButton(systemName: systemName, help: help, action: action)
+    }
+
+    private struct DesktopLyricControlButton: View {
+        let systemName: String
+        let help: String
+        let action: () -> Void
+
+        @State private var hovering = false
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: systemName)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.88))
+                    .frame(width: 24, height: 24)
+                    .background(Color.white.opacity(hovering ? 0.18 : 0), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help(help)
+            .onHover { hovering = $0 }
         }
-        .buttonStyle(.plain)
-        .help(help)
     }
 
     // MARK: 设置派生

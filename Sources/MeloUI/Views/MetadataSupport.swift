@@ -10,36 +10,17 @@ struct SourceChipBar: View {
     let selected: String
     let onSelect: (String) -> Void
 
-    @Environment(\.meloColors) private var colors
-
     private var sources: [MusicSourceInfo] {
         app.metadataSourcesWithAll.isEmpty ? app.builtinSources : app.metadataSourcesWithAll
     }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 ForEach(sources) { source in
-                    Button {
+                    MeloChip(text: source.name, isSelected: selected == source.id) {
                         onSelect(source.id)
-                    } label: {
-                        Text(source.name)
-                            .font(.system(size: 11, weight: selected == source.id ? .semibold : .regular))
-                            .foregroundStyle(selected == source.id ? colors.primary : colors.fontSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(
-                                selected == source.id ? colors.primaryOpacity(0.14) : colors.fontTertiary.opacity(0.08),
-                                in: Capsule()
-                            )
-                            .overlay(
-                                Capsule().strokeBorder(
-                                    selected == source.id ? colors.primaryOpacity(0.35) : Color.clear,
-                                    lineWidth: 1
-                                )
-                            )
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -61,7 +42,7 @@ struct LoadMoreBar: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(total > 0 ? "第 \(max(page, 1)) / \(max(allPage, page)) 页 · 共 \(total) 条" : "共 \(total) 条")
-                .font(.system(size: 10))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
             Spacer()
             if hasMore {
@@ -69,20 +50,19 @@ struct LoadMoreBar: View {
                     HStack(spacing: 6) {
                         if isLoading { ProgressView().controlSize(.mini) }
                         Text(isLoading ? "加载中…" : "加载更多")
-                            .font(.system(size: 11))
+                            .font(MeloFont.controlLabel)
                     }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
                 .disabled(isLoading)
             } else if total > 0 {
                 Text("已全部加载")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MeloMetrics.pageInset)
+        .padding(.vertical, 12)
     }
 }
 
@@ -101,10 +81,10 @@ struct MetadataUnavailableView: View {
             VStack(spacing: 12) {
                 ProgressView().controlSize(.regular)
                 Text("内置音源加载中…")
-                    .font(.system(size: 12))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(app.appColors.fontSecondary)
                 Text("首次启动需要准备 JavaScriptCore 运行时与内置音源脚本")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(app.appColors.fontTertiary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -121,27 +101,69 @@ struct InlineErrorBar: View {
     @Environment(\.meloColors) private var colors
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 10))
+                .font(.system(size: 12))
                 .foregroundStyle(colors.badgeTertiary)
             Text(message)
-                .font(.system(size: 10.5))
+                .font(MeloFont.secondary)
                 .foregroundStyle(colors.fontSecondary)
                 .lineLimit(2)
             Spacer(minLength: 8)
             Button(retryTitle, action: onRetry)
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(colors.badgeTertiary.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .strokeBorder(colors.badgeTertiary.opacity(0.22), lineWidth: 1)
-        )
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(colors.cardFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
+        .padding(.horizontal, MeloMetrics.pageInset)
+    }
+}
+
+/// Apple Music 式封面网格卡片：封面 + 下方两行文字（标题 13 semibold、副标题 12 次级）
+struct MeloCoverCard: View {
+    let title: String
+    var subtitle: String?
+    var cover: String?
+    var isSelected: Bool = false
+    let action: () -> Void
+
+    @Environment(\.meloColors) private var colors
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                CoverImage(urlString: cover, width: nil, height: nil, cornerRadius: MeloMetrics.coverRadius, sizingHint: 140)
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .meloCoverShadow(intensity: hovering ? 1.4 : 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: MeloMetrics.coverRadius, style: .continuous)
+                            .strokeBorder(isSelected ? colors.primary : Color.clear, lineWidth: 2)
+                    )
+
+                Text(title)
+                    .font(MeloFont.cardTitle)
+                    .foregroundStyle(colors.font)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(colors.fontSecondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .offset(y: hovering ? -3 : 0)
+            .animation(.easeOut(duration: 0.15), value: hovering)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(title)
     }
 }
 
@@ -150,61 +172,33 @@ struct SongListCard: View {
     let item: SongListItem
     let onOpen: () -> Void
 
-    @Environment(\.meloColors) private var colors
-    @State private var hovering = false
-
     var body: some View {
-        Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: 8) {
-                CoverImage(urlString: item.cover, width: nil, height: nil, cornerRadius: 8, sizingHint: 64)
-                    .aspectRatio(1, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
+        MeloCoverCard(
+            title: item.name,
+            subtitle: subtitleText,
+            cover: item.cover,
+            action: onOpen
+        )
+    }
 
-                Text(item.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(colors.font)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                HStack(spacing: 5) {
-                    if let creator = item.creator, !creator.isEmpty {
-                        Text(creator)
-                            .font(.system(size: 10))
-                            .foregroundStyle(colors.fontTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    if let playCount = MeloUIActions.formatPlayCount(item.playCount) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 7))
-                            Text(playCount)
-                                .font(.system(size: 9, design: .monospaced))
-                        }
-                        .foregroundStyle(colors.fontTertiary)
-                    }
-                }
+    private var subtitleText: String? {
+        if let creator = item.creator, !creator.isEmpty {
+            if let playCount = MeloUIActions.formatPlayCount(item.playCount) {
+                return "\(creator) · \(playCount)"
             }
-            .padding(9)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                colors.mainBackground.opacity(colors.isDark ? 0.55 : 0.72),
-                in: RoundedRectangle(cornerRadius: 11, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(hovering ? colors.primaryOpacity(0.4) : colors.border, lineWidth: 1)
-            )
-            .opacity(hovering ? 0.95 : 1)
+            return creator
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(item.name)
+        if let playCount = MeloUIActions.formatPlayCount(item.playCount) {
+            return "播放 \(playCount)"
+        }
+        if let total = item.total {
+            return "\(total) 首"
+        }
+        return nil
     }
 }
 
-/// 歌单列表行（搜索「歌单」Tab 使用）
+/// 歌单列表行（紧凑列表场景使用）
 struct SongListRow: View {
     let item: SongListItem
     let onOpen: () -> Void
@@ -215,34 +209,34 @@ struct SongListRow: View {
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: 12) {
-                CoverImage(urlString: item.cover, size: 56, cornerRadius: 7)
+                CoverImage(urlString: item.cover, size: 56, cornerRadius: MeloMetrics.coverRadius)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(MeloFont.cardTitle)
                         .foregroundStyle(colors.font)
                         .lineLimit(1)
                     HStack(spacing: 6) {
                         if let creator = item.creator, !creator.isEmpty {
                             Text(creator)
-                                .font(.system(size: 11))
+                                .font(MeloFont.secondary)
                                 .foregroundStyle(colors.fontSecondary)
                                 .lineLimit(1)
                         }
                         if let playCount = MeloUIActions.formatPlayCount(item.playCount) {
                             Text("· 播放 \(playCount)")
-                                .font(.system(size: 10))
+                                .font(MeloFont.caption)
                                 .foregroundStyle(colors.fontTertiary)
                         }
                         if item.total != nil {
                             Text("· \(item.total ?? 0) 首")
-                                .font(.system(size: 10))
+                                .font(MeloFont.caption)
                                 .foregroundStyle(colors.fontTertiary)
                         }
                     }
                     if let description = item.description, !description.isEmpty {
                         Text(description)
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontTertiary)
                             .lineLimit(1)
                     }
@@ -253,13 +247,13 @@ struct SongListRow: View {
                 MeloBadge(MeloUIActions.sourceName(item.source, app: nil), color: colors.badgeTertiary)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(colors.fontTertiary)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(hovering ? colors.hover : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(hovering ? colors.hover : Color.clear, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

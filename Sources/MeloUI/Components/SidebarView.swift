@@ -4,6 +4,7 @@ import MeloCore
 
 // MARK: - 侧边栏
 
+/// Apple Music 式侧边栏：毛玻璃材质、分组小标题、圆角强调色选中行。
 struct SidebarView: View {
     let app: AppModel
 
@@ -19,34 +20,35 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            brandHeader
             ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
-                    sectionHeader("发现音乐")
-                    row(icon: "magnifyingglass", title: app.localizer.t("search"), route: .search)
-                    row(icon: "chart.bar.xaxis", title: app.localizer.t("leaderboard"), route: .leaderboard)
-                    row(icon: "square.stack", title: app.localizer.t("song_list"), route: .songList)
-
-                    sectionHeader("我的音乐")
-                    ForEach(app.allLists) { list in
-                        listRow(list)
+                VStack(alignment: .leading, spacing: 22) {
+                    section("发现音乐") {
+                        row(icon: "magnifyingglass", title: app.localizer.t("search"), route: .search)
+                        row(icon: "chart.bar.xaxis", title: app.localizer.t("leaderboard"), route: .leaderboard)
+                        row(icon: "square.stack", title: app.localizer.t("song_list"), route: .songList)
                     }
-                    newListRow
 
-                    sectionHeader(Localizer.tr("setting__other"))
-                    row(icon: "arrow.down.circle", title: app.localizer.t("download"), route: .download)
+                    section("我的音乐") {
+                        ForEach(app.allLists) { list in
+                            listRow(list)
+                        }
+                        newListRow
+                    }
+
+                    section(Localizer.tr("setting__other")) {
+                        row(icon: "arrow.down.circle", title: app.localizer.t("download"), route: .download)
+                    }
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.top, 6)
+                .padding(.bottom, 12)
             }
-            Divider().overlay(colors.border)
+            .scrollContentBackground(.hidden)
+
             bottomBar
         }
         .background {
-            ZStack {
-                ThemeBackground(colors: colors, imageURL: app.theme.backgroundImageURL)
-                colors.appBackground.opacity(colors.isDark ? 0.55 : 0.70)
-            }
+            MeloMaterial.sidebar.ignoresSafeArea()
         }
         .alert(Localizer.tr("list__new_list_btn"), isPresented: $showNewListAlert) {
             TextField("列表名称", text: $newListName)
@@ -100,51 +102,15 @@ struct SidebarView: View {
         }
     }
 
-    // MARK: 品牌
-
-    private var brandHeader: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [colors.primary, colors.primary.opacity(0.72)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                Text("M")
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 30, height: 30)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Melo")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(colors.font)
-                Text("LX Music · macOS")
-                    .font(.system(size: 9))
-                    .foregroundStyle(colors.fontTertiary)
-            }
-            Spacer(minLength: 0)
-            Text("macOS")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(colors.primary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(colors.primaryOpacity(0.12), in: Capsule())
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(colors.fontTertiary)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 3)
+            content()
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 12)
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(colors.fontTertiary)
-            .padding(.horizontal, 10)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
     }
 
     // MARK: 行
@@ -241,15 +207,15 @@ struct SidebarView: View {
         } label: {
             HStack(spacing: 9) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 16)
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 18)
                 Text(Localizer.tr("list__new_list_btn"))
-                    .font(.system(size: 12))
+                    .font(MeloFont.body)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(colors.fontSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .frame(height: MeloMetrics.sidebarRowHeight)
+            .padding(.horizontal, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
@@ -271,14 +237,6 @@ struct SidebarView: View {
     private var bottomBar: some View {
         VStack(spacing: 2) {
             SidebarRow(
-                icon: "testtube.2",
-                title: "自定义源测试",
-                count: nil,
-                isActive: app.route == .test
-            ) {
-                app.route = .test
-            }
-            SidebarRow(
                 icon: "gearshape",
                 title: app.localizer.t("setting"),
                 count: nil,
@@ -286,18 +244,9 @@ struct SidebarView: View {
             ) {
                 app.route = .settings
             }
-            HStack {
-                Text("Melo · Native SwiftUI")
-                    .font(.system(size: 9))
-                    .foregroundStyle(colors.fontTertiary)
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 6)
-            .padding(.bottom, 8)
         }
         .padding(.horizontal, 8)
-        .padding(.top, 6)
+        .padding(.vertical, 8)
     }
 }
 
@@ -314,34 +263,39 @@ private struct SidebarRow: View {
     @Environment(\.meloColors) private var colors
     @State private var hovering = false
 
+    private var tint: Color { isActive ? .white : colors.font }
+    private var iconTint: Color { isActive ? .white : colors.fontSecondary }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(width: 16)
-                    .foregroundStyle(isActive ? colors.primary : colors.fontSecondary)
+                    .font(.system(size: 13, weight: .regular))
+                    .symbolVariant(isActive ? .fill : .none)
+                    .frame(width: 18)
+                    .foregroundStyle(iconTint)
                 Text(title)
-                    .font(.system(size: 12.5, weight: isActive ? .semibold : .regular))
-                    .foregroundStyle(colors.font)
+                    .font(.system(size: 13, weight: isActive ? .semibold : .regular))
+                    .foregroundStyle(tint)
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if isUpdating {
-                    ProgressView().controlSize(.mini)
+                    ProgressView().controlSize(.mini).tint(isActive ? .white : colors.primary)
                 }
                 if let count, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(colors.fontTertiary)
+                        .font(.system(size: 11))
+                        .monospacedDigit()
+                        .foregroundStyle(isActive ? Color.white.opacity(0.8) : colors.fontTertiary)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 9)
+            .frame(height: MeloMetrics.sidebarRowHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .background(
-                isActive ? colors.selected : (hovering ? colors.hover : Color.clear),
-                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                isActive ? colors.primary : (hovering ? colors.hover : Color.clear),
+                in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
             )
         }
         .buttonStyle(.plain)

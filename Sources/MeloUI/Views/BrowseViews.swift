@@ -12,20 +12,16 @@ struct PhaseBanner: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "hammer.fill")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundStyle(colors.primary)
             Text(text)
-                .font(.system(size: 11))
+                .font(MeloFont.secondary)
                 .foregroundStyle(colors.fontSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(colors.primaryOpacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(colors.primaryOpacity(0.18), lineWidth: 1)
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(colors.primaryOpacity(0.08), in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
     }
 }

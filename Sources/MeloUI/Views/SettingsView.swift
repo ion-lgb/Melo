@@ -61,12 +61,6 @@ struct SettingsView: View {
     @State private var pendingDeleteSource: UserSourceInfo?
     @State private var sourceImportError: String?
 
-    // 主题编辑器
-    @State private var showThemeEditor = false
-    @State private var themeEditorTarget: Theme?
-    @State private var themeEditorBaseID = ""
-    @State private var themeEditorInitialName = ""
-
     // 备份与恢复 / 开放 API
     @State private var pendingImport: PendingBackupImport?
     @State private var pendingCacheClear: CachePendingAction?
@@ -88,28 +82,34 @@ struct SettingsView: View {
     private let qualityOptions = ["128k", "320k", "flac", "flac24bit"]
     private let rateOptions: [Double] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
 
+    @State private var category: SettingsCategory = .appearance
+
+    private enum SettingsCategory: String, CaseIterable, Identifiable {
+        case appearance = "外观"
+        case playback = "播放"
+        case desktopLyric = "桌面歌词"
+        case hotKey = "快捷键"
+        case download = "下载"
+        case source = "源"
+        case data = "数据"
+        case network = "网络"
+        case system = "系统"
+
+        var id: String { rawValue }
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: MeloMetrics.gridSpacing) {
                 header
-                appearanceCard
-                playbackCard
-                desktopLyricCard
-                HotKeySettingsCard(app: app)
-                downloadCard
-                sourcesCard
-                dataCard
-                onlineListUpdateCard
-                backupCard
-                openAPICard
-                proxyCard
-                miscCard
-                aboutCard
+                categoryBar
+                categoryCards
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, MeloMetrics.pageInset)
             .padding(.vertical, 20)
             .frame(maxWidth: 920, alignment: .leading)
         }
+        .background(colors.groupedBackground)
         .fileImporter(
             isPresented: $importingSource,
             allowedContentTypes: [UTType(filenameExtension: "js") ?? .sourceCode, .sourceCode],
@@ -126,14 +126,6 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showURLImport) {
             ImportSourceSheet(app: app)
-        }
-        .sheet(isPresented: $showThemeEditor) {
-            ThemeEditorSheet(
-                app: app,
-                editingTheme: themeEditorTarget,
-                initialBaseID: themeEditorBaseID,
-                initialName: themeEditorInitialName
-            )
         }
         .sheet(isPresented: $showSleepTimerSheet) {
             SleepTimerSheet(app: app)
@@ -183,142 +175,72 @@ struct SettingsView: View {
                 app.route = .test
             } label: {
                 Label("自定义源测试", systemImage: "testtube.2")
-                    .font(.system(size: 11))
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.meloSecondary)
+        }
+    }
+
+    // MARK: 分类导航
+
+    private var categoryBar: some View {
+        HStack(spacing: 8) {
+            ForEach(SettingsCategory.allCases) { item in
+                MeloChip(text: item.rawValue, isSelected: category == item) {
+                    category = item
+                }
+            }
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var categoryCards: some View {
+        switch category {
+        case .appearance:
+            appearanceCard
+        case .playback:
+            playbackCard
+        case .desktopLyric:
+            desktopLyricCard
+        case .hotKey:
+            HotKeySettingsCard(app: app)
+        case .download:
+            downloadCard
+        case .source:
+            sourcesCard
+        case .data:
+            dataCard
+            onlineListUpdateCard
+            backupCard
+        case .network:
+            openAPICard
+            proxyCard
+        case .system:
+            miscCard
+            aboutCard
         }
     }
 
     // MARK: 外观
 
     private var appearanceCard: some View {
-        MeloCard(title: "外观与语言", subtitle: "15 套内置主题（含原版背景图主题）+ 自定义主题，支持跟随系统自动切换亮/暗主题", systemImage: "paintpalette") {
+        MeloCard(title: "外观与语言", subtitle: "外观已固定为 Apple Music 风格，支持跟随系统自动切换亮/暗", systemImage: "paintpalette") {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 8) {
-                    Image(systemName: "paintbrush.pointed")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(colors.primary)
-                    Text("主题库")
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundStyle(colors.font)
-                    Text("内置 \(app.theme.builtinThemes.count) · 自定义 \(app.userThemes.count)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(colors.fontTertiary)
-                    Spacer()
-                    Button {
-                        openThemeEditor(theme: nil, baseID: app.currentTheme.id, name: "我的主题")
-                    } label: {
-                        Label("新建主题…", systemImage: "plus")
-                            .font(.system(size: 10.5))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help("基于当前/内置主题创建自定义主题")
-
-                    Button {
-                        openThemeEditor(theme: nil, baseID: app.currentTheme.id, name: "\(app.currentTheme.name) 副本")
-                    } label: {
-                        Label("复制当前主题…", systemImage: "doc.on.doc")
-                            .font(.system(size: 10.5))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Button {
-                        importThemeJSONFromDisk()
-                    } label: {
-                        Label("导入 JSON…", systemImage: "square.and.arrow.down")
-                            .font(.system(size: 10.5))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Menu {
-                        ForEach(app.userThemes) { theme in
-                            Button {
-                                openThemeEditor(theme: theme, baseID: theme.id, name: theme.name)
-                            } label: {
-                                Label("编辑「\(theme.name)」", systemImage: "pencil")
-                            }
-                        }
-                        if let current = app.userThemes.first(where: { $0.id == app.currentTheme.id }) {
-                            Button {
-                                openThemeEditor(theme: current, baseID: current.id, name: current.name)
-                            } label: {
-                                Label("编辑当前主题", systemImage: "pencil.and.outline")
-                            }
-                        }
-                        if app.userThemes.isEmpty {
-                            Text("暂无自定义主题")
-                        }
-                        Divider()
-                        Button("新建主题…") {
-                            openThemeEditor(theme: nil, baseID: app.currentTheme.id, name: "我的主题")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 12))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                    .help("管理自定义主题")
-                }
-                .padding(.bottom, 2)
-
-                Toggle("跟随系统自动切换亮/暗主题", isOn: autoThemeBinding)
+                Toggle("跟随系统自动切换亮/暗", isOn: autoThemeBinding)
                     .toggleStyle(.switch)
-                    .font(.system(size: 12))
+                    .font(MeloFont.body)
+                    .frame(minHeight: 28)
 
-                if app.theme.isAutoMode {
-                    HStack(spacing: 18) {
-                        Picker(Localizer.tr("theme_selector_modal__light_title"), selection: lightThemeBinding) {
-                            ForEach(app.theme.allThemes.filter { !$0.isDark }) { theme in
-                                Text(themePickerLabel(theme)).tag(theme.id)
-                            }
-                        }
-                        .frame(maxWidth: 240)
-
-                        Picker(Localizer.tr("theme_edit_modal__dark"), selection: darkThemeBinding) {
-                            ForEach(app.theme.allThemes.filter { $0.isDark }) { theme in
-                                Text(themePickerLabel(theme)).tag(theme.id)
-                            }
-                        }
-                        .frame(maxWidth: 240)
-                        Spacer()
-                    }
-                }
-
-                if !app.theme.isAutoMode && !app.theme.allThemes.isEmpty {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 128), spacing: 10)],
-                        spacing: 10
-                    ) {
-                        ForEach(app.theme.allThemes) { theme in
-                            ThemeTile(
-                                theme: theme,
-                                isSelected: theme.id == app.theme.current.id,
-                                onEdit: theme.isCustom == true ? {
-                                    openThemeEditor(theme: theme, baseID: theme.id, name: theme.name)
-                                } : nil,
-                                onDelete: theme.isCustom == true ? {
-                                    confirmDeleteTheme(theme)
-                                } : nil
-                            ) {
-                                app.setTheme(id: theme.id)
-                            }
-                        }
-                    }
-                } else if app.theme.allThemes.isEmpty {
-                    Text("主题资源未加载（检查 Resources/themes.json）")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
-                }
+                Text("原版主题文件（themes.json 与自定义主题）仍会读写以保持数据兼容，但不再影响界面外观。")
+                    .font(MeloFont.caption)
+                    .foregroundStyle(colors.fontTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Divider().overlay(colors.border)
 
                 HStack(spacing: 14) {
                     Text(Localizer.tr("setting__basic_lang"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .foregroundStyle(colors.font)
                     Picker(Localizer.tr("setting__basic_lang"), selection: languageBinding) {
                         ForEach(app.localizer.languageOptions, id: \.locale) { option in
@@ -326,12 +248,20 @@ struct SettingsView: View {
                         }
                     }
                     .labelsHidden()
-                    .frame(maxWidth: 220)
+                    .pickerStyle(.menu)
+                    .menuIndicator(.visible)
+                    .buttonStyle(.plain)
+                    .tint(colors.font)
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(colors.chipFill, in: Capsule())
                     Text("运行时立即切换（复用原版 src/lang/*.json）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -344,13 +274,13 @@ struct SettingsView: View {
             subtitle: "从在线歌单/排行榜保存的列表可在此管理同步；勾选自动更新的列表会在每次启动时自动同步一次",
             systemImage: "arrow.triangle.2.circlepath"
         ) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "globe")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(colors.fontTertiary)
                     Text("在线列表：\(app.onlineUserLists.count) 个")
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
                     Spacer()
                     Button {
@@ -358,44 +288,38 @@ struct SettingsView: View {
                         app.showToast("已刷新列表更新状态")
                     } label: {
                         Label("刷新状态", systemImage: "arrow.clockwise")
-                            .font(.system(size: 10))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                 }
 
                 if app.onlineUserLists.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "tray")
-                            .font(.system(size: 10))
+                            .font(.system(size: 12))
                             .foregroundStyle(colors.fontTertiary)
                         Text("暂无在线列表。从在线歌单/排行榜保存为列表后，可在此查看与更新。")
-                            .font(.system(size: 10))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontTertiary)
                         Spacer()
                     }
-                    .padding(.vertical, 2)
+                    .frame(minHeight: 28)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(app.onlineUserLists.enumerated()), id: \.element.id) { index, list in
                             onlineListRow(list)
                             if index < app.onlineUserLists.count - 1 {
-                                Divider().overlay(colors.border.opacity(0.65))
+                                Divider().overlay(colors.border)
                             }
                         }
                     }
                     .background(
-                        colors.fontTertiary.opacity(0.04),
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(colors.border, lineWidth: 1)
+                        colors.chipFill,
+                        in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                     )
                 }
 
                 Text("说明：更新会按源歌单/排行榜的最新内容覆盖该列表内歌曲（保留列表本身）；自动更新仅在应用启动时触发一次，更新失败会 toast 提示。")
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -407,13 +331,13 @@ struct SettingsView: View {
         let isUpdating = app.updatingListIds.contains(list.id)
         return HStack(spacing: 10) {
             Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(colors.fontSecondary)
                 .frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(list.name)
-                        .font(.system(size: 11.5, weight: .medium))
+                        .font(MeloFont.cardTitle)
                         .foregroundStyle(colors.font)
                         .lineLimit(1)
                     if let source = list.source, !source.isEmpty {
@@ -421,7 +345,7 @@ struct SettingsView: View {
                     }
                 }
                 Text("最后更新：\(formatUpdateTime(info?.updateTime ?? 0))")
-                    .font(.system(size: 9))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
@@ -431,23 +355,22 @@ struct SettingsView: View {
             ))
             .toggleStyle(.switch)
             .controlSize(.mini)
-            .font(.system(size: 10))
+            .font(MeloFont.secondary)
 
             if isUpdating {
                 ProgressView().controlSize(.mini)
                 Text("更新中…")
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             } else {
                 Button(Localizer.tr("list_update_modal__update")) {
                     Task { await app.updateSourceList(id: list.id) }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 32)
     }
 
     private func formatUpdateTime(_ milliseconds: Int64) -> String {
@@ -469,74 +392,35 @@ struct SettingsView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    // MARK: 主题编辑 / 导入删除
-
-    private func openThemeEditor(theme: Theme?, baseID: String, name: String) {
-        themeEditorTarget = theme
-        themeEditorBaseID = baseID
-        themeEditorInitialName = name
-        showThemeEditor = true
-    }
-
-    private func confirmDeleteTheme(_ theme: Theme) {
-        let alert = NSAlert()
-        alert.messageText = "删除自定义主题"
-        alert.informativeText = "将删除「\(theme.name)」，此操作不可撤销；内置主题不受影响。"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "删除")
-        alert.addButton(withTitle: Localizer.tr("btn_cancel"))
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        app.removeUserTheme(id: theme.id)
-    }
-
-    private func importThemeJSONFromDisk() {
-        let panel = NSOpenPanel()
-        panel.title = "导入主题 JSON"
-        panel.message = "选择原版格式的主题 JSON 文件（单个 Theme 对象）"
-        panel.prompt = Localizer.tr("import")
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json, .text]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            app.showToast("读取主题文件失败")
-            return
-        }
-        if let imported = app.importThemeJSON(text) {
-            openThemeEditor(theme: imported, baseID: imported.id, name: imported.name)
-        }
-    }
-
     // MARK: 播放
 
     private var playbackCard: some View {
         MeloCard(title: Localizer.tr("list__play"), subtitle: "音量 / 默认音质 / 播放速度等会写入原版 config_v2.json", systemImage: "play.circle") {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
                     Text("默认音量")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Slider(
                         value: Binding(get: { app.volume }, set: { app.setVolume($0) }),
                         in: 0...1
                     )
-                    .controlSize(.small)
                     .tint(colors.primary)
                     .frame(width: 220)
                     Text("\(Int((app.volume * 100).rounded()))%")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(colors.fontSecondary)
-                        .frame(width: 40, alignment: .trailing)
+                        .frame(width: 44, alignment: .trailing)
                     Toggle(Localizer.tr("player__volume_mute_label"), isOn: Binding(get: { app.isMuted }, set: { _ in app.toggleMute() }))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("默认音质")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Picker("默认音质", selection: stringBinding(SettingKeys.playQuality, default: "128k")) {
                         ForEach(qualityOptions, id: \.self) { quality in
@@ -546,14 +430,15 @@ struct SettingsView: View {
                     .labelsHidden()
                     .frame(width: 140)
                     Text("实际取链时会按自定义源能力自动降级")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("播放速度")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Picker("播放速度", selection: Binding(
                         get: { app.playbackRate },
@@ -567,17 +452,18 @@ struct SettingsView: View {
                     .frame(width: 120)
                     Toggle("保持音调", isOn: boolBinding(SettingKeys.preservesPitch, default: true))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("输出设备")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     if app.availableOutputDevices.isEmpty {
                         Text("未发现音频输出设备")
-                            .font(.system(size: 11))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontTertiary)
                     } else {
                         Picker("输出设备", selection: outputDeviceBinding) {
@@ -591,16 +477,17 @@ struct SettingsView: View {
                         .frame(width: 220)
                     }
                     Text(app.currentOutputDeviceName)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(alignment: .top, spacing: 12) {
                     Text("")
                         .frame(width: 84, alignment: .leading)
                     Text("选择非默认设备后，播放会切换到音效引擎（远程音频需先缓存，属 AVPlayer 无法直接指定输出设备的限制）；切换设备会保留当前播放位置。")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -608,38 +495,40 @@ struct SettingsView: View {
 
                 HStack(spacing: 12) {
                     Text(Localizer.tr("setting__other"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("界面动画", isOn: boolBinding(SettingKeys.showAnimation, default: true))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("（动画设置会写入原版 config_v2.json）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("播放增强")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("播放错误时自动切歌", isOn: boolBinding(SettingKeys.autoSkipOnError, default: true))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle("启动后自动播放", isOn: boolBinding(SettingKeys.startupAutoPlay, default: false))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle("记住上次播放进度", isOn: boolBinding(SettingKeys.savePlayTime, default: false))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(alignment: .top, spacing: 12) {
                     Text("")
                         .frame(width: 84, alignment: .leading)
                     Text("自动切歌：播放地址失效/解码失败时跳过当前歌曲（连续 3 次失败后停止）；启动自动播放会在下次启动时恢复上次歌曲；记住进度会保存播放位置。")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -647,110 +536,112 @@ struct SettingsView: View {
 
                 HStack(spacing: 12) {
                     Text(Localizer.tr("play_timeout"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     if let remaining = app.playTimeoutRemaining {
                         Text(remaining <= 0 ? "等待本曲结束" : "剩余 \(formatTimeout(remaining))")
-                            .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
                             .foregroundStyle(colors.primary)
                         Button(Localizer.tr("play_timeout_stop")) {
                             app.cancelPlayTimeout()
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.meloSecondary)
                     } else {
                         Text(Localizer.tr("setting__hot_key_unset_input"))
-                            .font(.system(size: 11))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontTertiary)
                     }
                     Button("设置定时暂停…") {
                         showSleepTimerSheet = true
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     Text("到时间自动暂停播放；可选等待当前歌曲结束")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("窗口")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("关闭窗口时最小化到菜单栏", isOn: boolBinding(SettingKeys.trayEnable, default: false))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("菜单栏图标常驻，点击可重新打开主窗口；窗口大小/位置已自动记忆（NSWindow autosave）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("歌词显示")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("翻译", isOn: lyricOptionBinding(SettingKeys.showLyricTranslation))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle("罗马音", isOn: lyricOptionBinding(SettingKeys.showLyricRoma))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle("逐字", isOn: lyricOptionBinding(SettingKeys.playWordByWordLyric))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle("繁简", isOn: lyricOptionBinding(SettingKeys.convertLyricS2T))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("（播放详情 / 桌面歌词生效）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("视觉")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle(Localizer.tr("audio_visualization"), isOn: Binding(
                         get: { app.isAudioVisualizationEnabled },
                         set: { app.setAudioVisualizationEnabled($0) }
                     ))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("仅音效引擎播放时可用；开启后播放会强制走音效引擎（远程歌曲首次需缓存，AVPlayer 路径无频谱）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 Divider().overlay(colors.border)
 
                 HStack(spacing: 12) {
                     Text("音效")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(hasSoundEffects ? colors.primary : colors.fontTertiary)
-                                .frame(width: 6, height: 6)
+                                .frame(width: 7, height: 7)
                             Text(audioEffectSummary)
-                                .font(.system(size: 11))
+                                .font(MeloFont.body)
                                 .foregroundStyle(hasSoundEffects ? colors.font : colors.fontSecondary)
                         }
                         Text("10 段均衡器 / 变速变调会写入原版 player.soundEffect.*；启用后播放会切换到音效引擎")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontTertiary)
                     }
                     Spacer()
                     Button("打开音效面板") {
                         NotificationCenter.default.post(name: .meloShowSoundEffectPanel, object: nil)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -766,19 +657,18 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Text(Localizer.tr("setting__is_enable"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("桌面歌词", isOn: boolBinding(SettingKeys.desktopLyricEnable, default: false))
                         .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Button(app.settings.bool(SettingKeys.desktopLyricEnable) ? Localizer.tr("player__desktop_lyric_off") : "打开桌面歌词") {
                         toggleDesktopLyricWindow()
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 desktopLyricSlider("字号", value: app.desktopLyricFontSize, range: 10...60, step: 1, suffix: "pt") {
                     app.setDesktopLyricFontSize($0)
@@ -792,7 +682,7 @@ struct SettingsView: View {
 
                 HStack(spacing: 12) {
                     Text("对齐")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Picker("对齐", selection: Binding(
                         get: { app.desktopLyricAlign },
@@ -804,20 +694,22 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                    .font(MeloFont.body)
                     .frame(width: 220)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 14) {
                     Text("颜色")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     ColorPicker(Localizer.tr("list__play"), selection: desktopLyricColorBinding(.played), supportsOpacity: true)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     ColorPicker("未播放", selection: desktopLyricColorBinding(.unplay), supportsOpacity: true)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     ColorPicker("阴影", selection: desktopLyricColorBinding(.shadow), supportsOpacity: true)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Button("恢复默认配色") {
                         app.setDesktopLyricColors(
                             played: "rgba(7, 197, 86, 1)",
@@ -825,22 +717,23 @@ struct SettingsView: View {
                             shadow: "rgba(0, 0, 0, 0.18)"
                         )
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 Divider().overlay(colors.border)
 
                 HStack(spacing: 18) {
                     Text("行为")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     desktopLyricBehaviorToggle("暂停时隐藏", key: SettingKeys.desktopLyricPauseHide)
                     desktopLyricBehaviorToggle("鼠标悬停隐藏", key: SettingKeys.desktopLyricHoverHide)
                     desktopLyricBehaviorToggle("全屏时隐藏", key: SettingKeys.desktopLyricFullscreenHide)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 18) {
                     Text("")
@@ -848,26 +741,28 @@ struct SettingsView: View {
                     desktopLyricBehaviorToggle("延迟滚动", key: SettingKeys.desktopLyricDelayScroll)
                     desktopLyricBehaviorToggle("超长省略", key: SettingKeys.desktopLyricEllipsis)
                     Text("桌面歌词区域右键可快速调整歌词偏移/字号/对齐")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 18) {
                     Text("视觉")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle(Localizer.tr("setting__desktop_lyric_audio_visualization"), isOn: Binding(
                         get: { app.isDesktopLyricAudioVisualizationEnabled },
                         set: { app.setAudioVisualizationEnabled($0, desktopLyric: true) }
                     ))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("在歌词上方显示细频谱；仅音效引擎播放时可用，远程歌曲首次需缓存")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -880,22 +775,22 @@ struct SettingsView: View {
                                     onChange: @escaping (Double) -> Void) -> some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 12))
+                .font(MeloFont.body)
                 .frame(width: 84, alignment: .leading)
             Slider(
                 value: Binding(get: { min(max(value, range.lowerBound), range.upperBound) }, set: onChange),
                 in: range,
                 step: step
             )
-            .controlSize(.small)
             .tint(colors.primary)
             .frame(width: 220)
             Text("\(Int(value.rounded()))\(suffix)")
-                .font(.system(size: 10.5, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(colors.fontSecondary)
-                .frame(width: 54, alignment: .leading)
+                .frame(width: 56, alignment: .leading)
             Spacer()
         }
+        .frame(minHeight: 28)
     }
 
     private enum DesktopLyricColorSlot {
@@ -930,7 +825,7 @@ struct SettingsView: View {
             set: { app.setDesktopLyricBehavior(key, enabled: $0) }
         ))
         .toggleStyle(.checkbox)
-        .font(.system(size: 11))
+        .font(MeloFont.body)
     }
 
     private func lyricOptionBinding(_ key: String) -> Binding<Bool> {
@@ -1004,35 +899,35 @@ struct SettingsView: View {
             subtitle: "原生下载引擎；保存目录 / 文件名 / 并发数与标签写入设置与原版 config_v2.json 兼容",
             systemImage: "arrow.down.circle"
         ) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 Toggle("开启下载功能", isOn: boolBinding(SettingKeys.downloadEnable, default: false))
                     .toggleStyle(.switch)
-                    .font(.system(size: 12))
+                    .font(MeloFont.body)
+                    .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("保存目录")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Text(currentDownloadPath)
-                        .font(.system(size: 10.5, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(colors.fontSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .textSelection(.enabled)
                     Spacer(minLength: 8)
                     Button("选择目录…") { chooseDownloadFolder() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.meloSecondary)
                     Button(Localizer.tr("songlist__import_input_btn_confirm")) {
                         NSWorkspace.shared.open(URL(fileURLWithPath: currentDownloadPath, isDirectory: true))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("文件名模板")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Picker("文件名模板", selection: stringBinding(SettingKeys.downloadFileName, default: "歌名 - 歌手")) {
                         Text("歌名 - 歌手").tag("歌名 - 歌手")
@@ -1042,14 +937,15 @@ struct SettingsView: View {
                     .labelsHidden()
                     .frame(width: 180)
                     Text("示例：\(downloadTemplatePreview)")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("同时下载")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Picker("同时下载", selection: intBinding(SettingKeys.downloadMaxNumber, default: 3)) {
                         ForEach(1...10, id: \.self) { count in
@@ -1059,26 +955,28 @@ struct SettingsView: View {
                     .labelsHidden()
                     .frame(width: 80)
                     Text("修改后需重启应用生效（下载服务在启动时创建并发队列）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 12) {
                     Text("写入标签")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle(Localizer.tr("setting__download_embed_pic"), isOn: boolBinding(SettingKeys.downloadEmbedPic, default: true))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Toggle(Localizer.tr("setting__download_embed_lyric"), isOn: boolBinding(SettingKeys.downloadEmbedLyric, default: false))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("MP3 / FLAC 下载完成后写入标题、歌手、专辑等元数据")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if app.settings.bool(SettingKeys.downloadEmbedLyric) {
                     HStack(spacing: 12) {
@@ -1086,32 +984,34 @@ struct SettingsView: View {
                             .frame(width: 84, alignment: .leading)
                         Toggle("逐字", isOn: boolBinding(SettingKeys.downloadEmbedLyricLx, default: true))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Toggle("翻译", isOn: boolBinding(SettingKeys.downloadEmbedLyricT, default: false))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Toggle("罗马音", isOn: boolBinding(SettingKeys.downloadEmbedLyricR, default: false))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Text("逐字/翻译/罗马音会合并进歌词标签（逐字默认开启）")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontTertiary)
                         Spacer()
                     }
+                    .frame(minHeight: 28)
                 }
 
                 HStack(spacing: 12) {
                     Text("歌词文件")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("保存歌词文件", isOn: boolBinding(SettingKeys.downloadSaveLrc, default: false))
                         .toggleStyle(.checkbox)
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                     Text("下载歌曲时同时保存 .lrc 歌词文件")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if app.settings.bool(SettingKeys.downloadSaveLrc) {
                     HStack(spacing: 12) {
@@ -1119,15 +1019,15 @@ struct SettingsView: View {
                             .frame(width: 84, alignment: .leading)
                         Toggle("合并逐字", isOn: boolBinding(SettingKeys.downloadSaveLxLrc, default: true))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Toggle("翻译", isOn: boolBinding(SettingKeys.downloadSaveTLrc, default: false))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Toggle("罗马音", isOn: boolBinding(SettingKeys.downloadSaveRLrc, default: false))
                             .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
+                            .font(MeloFont.body)
                         Text("编码")
-                            .font(.system(size: 11))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                         Picker("编码", selection: stringBinding(SettingKeys.downloadLrcFormat, default: "utf8")) {
                             Text(Localizer.tr("setting__download_lyric_format_utf8")).tag("utf8")
@@ -1137,24 +1037,25 @@ struct SettingsView: View {
                         .frame(width: 96)
                         Spacer()
                     }
+                    .frame(minHeight: 28)
                 }
 
                 Divider().overlay(colors.border)
 
                 HStack(spacing: 10) {
                     Text("当前队列：\(app.downloadTasks.count) 个任务 · 进行中 \(activeDownloadCount)")
-                        .font(.system(size: 10.5))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontSecondary)
                     Spacer()
                     if !app.isDownloadEnabled {
                         Text("下载功能已关闭")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.badgeTertiary)
                     }
                     Button("打开下载页") { app.route = .download }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.meloSecondary)
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -1201,31 +1102,33 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Text(Localizer.tr("export"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     backupButton("全部数据（.lxmc）", systemImage: "square.and.arrow.up", kind: .allData)
                     backupButton("列表（.lxmc）", systemImage: "square.and.arrow.up", kind: .playlists)
                     backupButton("设置（.lxmc）", systemImage: "square.and.arrow.up", kind: .settings)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 8) {
                     Text(Localizer.tr("import"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     importButton("全部数据", kind: .allData)
                     importButton("列表", kind: .playlists)
                     importButton(Localizer.tr("setting"), kind: .settings)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if let backupStatusText {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(colors.primary)
                         Text(backupStatusText)
-                            .font(.system(size: 10))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                     }
                 }
@@ -1233,7 +1136,7 @@ struct SettingsView: View {
                 Divider().overlay(colors.border)
 
                 Text("说明：导出为原版 .lxmc（gzip JSON），可直接与 LX Music Desktop 互通；导入会覆盖对应的当前数据（列表按原版规则合并/覆盖），建议先导出一份备份。设置导入后部分项可能需要重启应用生效。")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1245,10 +1148,8 @@ struct SettingsView: View {
             exportBackup(kind)
         } label: {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 10.5))
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.meloSecondary)
         .help("导出为 \(kind.defaultFileName)")
     }
 
@@ -1257,10 +1158,8 @@ struct SettingsView: View {
             beginImportBackup(kind)
         } label: {
             Label("导入\(title)", systemImage: "square.and.arrow.down")
-                .font(.system(size: 10.5))
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.meloSecondary)
     }
 
     private var importAlertBinding: Binding<Bool> {
@@ -1328,56 +1227,58 @@ struct SettingsView: View {
                 HStack(spacing: 10) {
                     Toggle("启用本地开放 API", isOn: openAPIEnabledBinding)
                         .toggleStyle(.switch)
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                     Spacer()
                     openAPIStatusRow
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 10) {
                     Toggle("允许局域网访问", isOn: openAPIBindLanBinding)
                         .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .font(.system(size: 11.5))
+                        .font(MeloFont.body)
                     Text(app.openAPIBindLan ? "绑定 0.0.0.0（局域网可访问）" : "绑定 127.0.0.1（仅本机）")
-                        .font(.system(size: 9.5, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(app.openAPIBindLan ? colors.badgeTertiary : colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if app.openAPIBindLan {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(colors.badgeTertiary)
                             .padding(.top, 1)
                         Text("已允许局域网访问：同一网络内的任意设备都可调用该 API（端点无 TLS）；如仅本机使用请关闭。建议同时设置 Token（请求头 Authorization: Bearer <token>）。")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(8)
+                    .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(colors.badgeTertiary.opacity(0.10), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .background(colors.badgeTertiary.opacity(0.10), in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
                 }
 
                 HStack(spacing: 8) {
                     Text(Localizer.tr("setting__network_proxy_port"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     TextField("23330", text: $portText)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .frame(width: 96)
                         .onSubmit { applyOpenAPISettings() }
                     Text("1–65535")
-                        .font(.system(size: 9.5))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 8) {
                     Text("Token")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     Group {
                         if maskToken {
@@ -1387,7 +1288,7 @@ struct SettingsView: View {
                         }
                     }
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .frame(width: 240)
                     .onSubmit { applyOpenAPISettings() }
 
@@ -1395,39 +1296,40 @@ struct SettingsView: View {
                         maskToken.toggle()
                     } label: {
                         Image(systemName: maskToken ? "eye" : "eye.slash")
-                            .font(.system(size: 10))
+                            .font(.system(size: 12))
+                            .foregroundStyle(colors.fontSecondary)
                     }
                     .buttonStyle(.plain)
                     .help(maskToken ? "显示 Token" : "隐藏 Token")
 
                     Button("应用端口 / Token") { applyOpenAPISettings() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.meloSecondary)
 
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if app.openAPIEnabled && app.openAPIToken.isEmpty {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(colors.badgeTertiary)
                             .padding(.top, 1)
                         Text("Token 为空：本机任意程序都可以调用接口控制播放。建议设置一个随机 Token（请求头 Authorization: Bearer <token>）。")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(8)
+                    .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(colors.badgeTertiary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .background(colors.badgeTertiary.opacity(0.10), in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
                 }
 
                 Divider().overlay(colors.border)
 
                 HStack {
                     Text("端点示例")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                     Button {
@@ -1435,24 +1337,23 @@ struct SettingsView: View {
                         app.showToast("已复制 API 端点示例")
                     } label: {
                         Label("复制端点", systemImage: "doc.on.doc")
-                            .font(.system(size: 10))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                 }
+                .frame(minHeight: 28)
 
                 Text(openAPIEndpointsText)
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(colors.fontSecondary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-                    .background(colors.fontTertiary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(10)
+                    .background(colors.chipFill, in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous))
 
                 Text(app.openAPIBindLan
                      ? "安全提示：当前监听 0.0.0.0（局域网可访问，不对外网开放）；如仅本机使用请关闭「允许局域网访问」，并建议设置 Token。"
                      : "安全提示：服务仅监听 127.0.0.1（不对外网开放）；如需局域网访问请开启「允许局域网访问」并设置 Token。")
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(app.openAPIBindLan ? colors.badgeTertiary : colors.fontTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1487,12 +1388,12 @@ struct SettingsView: View {
     private var openAPIStatusRow: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(app.openAPIRunning ? colors.primary : (app.openAPIError != nil ? Color.red : colors.fontTertiary))
+                .fill(app.openAPIRunning ? colors.primary : (app.openAPIError != nil ? colors.badgeTertiary : colors.fontTertiary))
                 .frame(width: 7, height: 7)
 
             if app.openAPIRunning {
                 Text("运行中 · http://\(openAPIHost):\(app.openAPIPort)\(app.openAPIBindLan ? "（局域网）" : "")")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(app.openAPIBindLan ? colors.badgeTertiary : colors.fontSecondary)
                     .textSelection(.enabled)
                 Button {
@@ -1500,31 +1401,32 @@ struct SettingsView: View {
                     app.showToast("已复制 API 地址")
                 } label: {
                     Image(systemName: "doc.on.doc")
-                        .font(.system(size: 9))
+                        .font(.system(size: 11))
+                        .foregroundStyle(colors.fontSecondary)
                 }
                 .buttonStyle(.plain)
                 .help("复制 API 地址")
             } else if let error = app.openAPIError {
                 Text("启动失败：\(error)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.red)
+                    .font(MeloFont.secondary)
+                    .foregroundStyle(colors.primary)
                     .lineLimit(2)
             } else if app.openAPIEnabled {
                 Text("未运行（等待启动）")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             } else {
                 Text("已关闭")
-                    .font(.system(size: 10))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
 
             Button("重新启动") {
                 app.restartOpenAPI()
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(.meloSecondary)
             .disabled(!app.openAPIEnabled)
+            .opacity(app.openAPIEnabled ? 1 : 0.5)
             .help("按当前端口 / Token 重新启动服务")
         }
     }
@@ -1583,53 +1485,48 @@ struct SettingsView: View {
                         app.showToast("已刷新自定义源列表")
                     } label: {
                         Label("刷新", systemImage: "arrow.clockwise")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Button {
                         importingSource = true
                     } label: {
                         Label("导入源文件…", systemImage: "square.and.arrow.down")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.primary)
+                    .buttonStyle(.meloPrimary)
 
                     Button {
                         showURLImport = true
                     } label: {
                         Label("从链接导入…", systemImage: "link")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                     .help("从 http(s) 链接在线导入自定义源脚本")
 
                     Button {
                         app.route = .test
                     } label: {
                         Label("测试面板", systemImage: "testtube.2")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
                 }
 
                 if let sourceImportError {
                     Text("导入失败：\(sourceImportError)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(colors.primary)
                 }
 
                 if app.sources.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 11))
+                            .font(.system(size: 13))
                             .foregroundStyle(colors.fontTertiary)
                         Text("尚未导入自定义源。可点击「导入源文件…」选择本地 .js 脚本，或点击「从链接导入…」从 http(s) 链接在线导入（如原版 community 源）。")
-                            .font(.system(size: 11))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                     }
-                    .padding(.vertical, 4)
+                    .frame(minHeight: 28)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(app.sources) { source in
@@ -1640,15 +1537,15 @@ struct SettingsView: View {
                         }
                     }
                     .background(
-                        colors.fontTertiary.opacity(0.05),
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        colors.chipFill,
+                        in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                     )
                 }
 
                 if !app.activeCapabilities.isEmpty {
                     HStack(alignment: .top, spacing: 8) {
                         Text("能力")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontTertiary)
                             .padding(.top, 2)
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -1665,16 +1562,16 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text("源日志")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(MeloFont.caption)
                                 .foregroundStyle(colors.fontTertiary)
                             Spacer()
                             Text("最新 \(min(app.sourceLogs.count, 120)) 条")
-                                .font(.system(size: 9))
+                                .font(MeloFont.microCaption)
                                 .foregroundStyle(colors.fontTertiary)
                         }
                         ScrollView {
                             Text(app.sourceLogs.suffix(120).joined(separator: "\n"))
-                                .font(.system(size: 9.5, design: .monospaced))
+                                .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(colors.fontSecondary)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1682,8 +1579,8 @@ struct SettingsView: View {
                         }
                         .frame(height: 110)
                         .background(
-                            colors.fontTertiary.opacity(0.06),
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            colors.chipFill,
+                            in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                         )
                     }
                 }
@@ -1705,40 +1602,40 @@ struct SettingsView: View {
             }
         }()
         return HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
+            Circle().fill(color).frame(width: 7, height: 7)
             Text(text)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.fontSecondary)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
         .background(color.opacity(0.10), in: Capsule())
     }
 
     private func sourceRow(_ source: UserSourceInfo) -> some View {
         HStack(spacing: 10) {
             Image(systemName: source.id == app.activeSourceId ? "checkmark.seal.fill" : "doc.text")
-                .font(.system(size: 14))
+                .font(.system(size: 15))
                 .foregroundStyle(source.id == app.activeSourceId ? colors.primary : colors.fontTertiary)
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(source.name)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(MeloFont.cardTitle)
                         .foregroundStyle(colors.font)
                     if let version = source.version, !version.isEmpty {
                         MeloBadge("v\(version)", color: colors.badgeSecondary)
                     }
                     if let author = source.author, !author.isEmpty {
                         Text(author)
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(colors.fontTertiary)
                     }
                 }
                 Text(source.description?.isEmpty == false ? (source.description ?? "") : source.id)
-                    .font(.system(size: 10.5))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
                     .lineLimit(1)
             }
@@ -1747,45 +1644,39 @@ struct SettingsView: View {
 
             if source.id == app.activeSourceId {
                 Text("使用中")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(MeloFont.controlLabel)
                     .foregroundStyle(colors.primary)
             } else {
                 Button("激活") {
                     Task { await app.activateSource(id: source.id) }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
                 .disabled(app.isSwitchingSource)
+                .opacity(app.isSwitchingSource ? 0.5 : 1)
             }
 
-            Button {
+            MeloIconButton(systemName: "trash", help: "删除源") {
                 pendingDeleteSource = source
-            } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 11))
-                    .foregroundStyle(colors.fontTertiary)
             }
-            .buttonStyle(.plain)
-            .help("删除源")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 40)
     }
 
     private func capabilityChip(_ cap: SourceCapability) -> some View {
         HStack(spacing: 5) {
             Text(cap.source)
-                .font(.system(size: 10, weight: .semibold))
+                .font(MeloFont.controlLabel)
                 .foregroundStyle(colors.badgePrimary)
             Text(cap.qualitys.joined(separator: " / "))
-                .font(.system(size: 9.5, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(colors.fontSecondary)
             Text(cap.actions.joined(separator: ","))
-                .font(.system(size: 9))
+                .font(MeloFont.microCaption)
                 .foregroundStyle(colors.fontTertiary)
         }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
         .background(colors.badgePrimary.opacity(0.10), in: Capsule())
     }
 
@@ -1796,10 +1687,10 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "folder")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(colors.fontTertiary)
                     Text(app.data.dataDirectory.path)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(colors.fontSecondary)
                         .textSelection(.enabled)
                         .lineLimit(1)
@@ -1812,26 +1703,25 @@ struct SettingsView: View {
                         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: app.data.dataDirectory.path)
                     } label: {
                         Label("在 Finder 中打开", systemImage: "finder")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Button {
                         app.refreshLibrary()
                         app.showToast("已重新加载曲库")
                     } label: {
                         Label("重新加载曲库", systemImage: "arrow.clockwise")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 if let libraryError = app.libraryError {
                     Text("曲库错误：\(libraryError)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
+                        .font(MeloFont.secondary)
+                        .foregroundStyle(colors.primary)
                 }
 
                 Divider().overlay(colors.border)
@@ -1847,52 +1737,47 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "archivebox")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(colors.primary)
                 Text("缓存管理")
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(MeloFont.cardTitle)
                     .foregroundStyle(colors.font)
                 Spacer()
                 Text("总占用：\(formattedTotalCacheSize)")
-                    .font(.system(size: 10.5, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(colors.fontSecondary)
                 Button {
                     app.refreshCacheInfo()
                 } label: {
                     Label("刷新", systemImage: "arrow.clockwise")
-                        .font(.system(size: 10))
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
             }
+            .frame(minHeight: 28)
 
             if app.cacheCategories.isEmpty || app.totalCacheSize == 0 {
                 HStack(spacing: 8) {
                     Image(systemName: "tray")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundStyle(colors.fontTertiary)
                     Text("暂无缓存文件（本地封面 / 音效渲染 / 下载临时目录均无缓存）")
-                        .font(.system(size: 10))
+                        .font(MeloFont.secondary)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
-                .padding(.vertical, 2)
+                .frame(minHeight: 28)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(app.cacheCategories.enumerated()), id: \.element.id) { index, category in
                         cacheCategoryRow(category)
                         if index < app.cacheCategories.count - 1 {
-                            Divider().overlay(colors.border.opacity(0.65))
+                            Divider().overlay(colors.border)
                         }
                     }
                 }
                 .background(
-                    colors.fontTertiary.opacity(0.04),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(colors.border, lineWidth: 1)
+                    colors.chipFill,
+                    in: RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                 )
             }
 
@@ -1902,16 +1787,16 @@ struct SettingsView: View {
                     pendingCacheClear = .all
                 } label: {
                     Label("清理全部缓存", systemImage: "trash")
-                        .font(.system(size: 10.5))
+                        .foregroundStyle(colors.primary)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.meloSecondary)
                 .disabled(app.cacheCategories.allSatisfy { $0.sizeBytes == 0 || $0.fileCount == 0 })
+                .opacity(app.cacheCategories.allSatisfy { $0.sizeBytes == 0 || $0.fileCount == 0 } ? 0.5 : 1)
                 .help("依次清理全部分类的缓存文件")
             }
 
             Text("说明：清理「本地音乐封面」后下次显示会重新从音频中提取；清理「音效/混响渲染缓存」后下次启用音效会重新处理；下载临时目录仅清理未完成的临时文件。不会影响歌单、歌曲、设置、自定义源等核心数据。")
-                .font(.system(size: 9.5))
+                .font(MeloFont.caption)
                 .foregroundStyle(colors.fontTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1944,30 +1829,30 @@ struct SettingsView: View {
     private func cacheCategoryRow(_ category: CacheCategoryInfo) -> some View {
         HStack(spacing: 10) {
             Image(systemName: cacheIcon(for: category.id))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(colors.fontSecondary)
                 .frame(width: 18)
             VStack(alignment: .leading, spacing: 1) {
                 Text(category.name)
-                    .font(.system(size: 11))
+                    .font(MeloFont.body)
                     .foregroundStyle(colors.font)
                 Text("\(category.fileCount) 个文件")
-                    .font(.system(size: 9))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
             }
             Spacer()
             Text(category.displaySize)
-                .font(.system(size: 10.5, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(colors.fontSecondary)
             Button("清理") {
                 pendingCacheClear = .category(category)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(.meloSecondary)
             .disabled(category.fileCount == 0 || category.sizeBytes == 0)
+            .opacity(category.fileCount == 0 || category.sizeBytes == 0 ? 0.5 : 1)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 32)
     }
 
     private func cacheIcon(for categoryID: String) -> String {
@@ -2013,53 +1898,55 @@ struct SettingsView: View {
                 HStack(spacing: 10) {
                     Toggle("启用 HTTP(S) 代理", isOn: $proxyEnabled)
                         .toggleStyle(.switch)
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                     Spacer()
                     if app.proxySettings.isValid {
                         HStack(spacing: 5) {
-                            Circle().fill(colors.primary).frame(width: 6, height: 6)
+                            Circle().fill(colors.primary).frame(width: 7, height: 7)
                             Text("当前生效：\(app.proxySettings.host):\(app.proxySettings.port)")
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(.system(size: 11, design: .monospaced))
                                 .foregroundStyle(colors.primary)
                         }
                     } else {
                         Text(proxyEnabled ? "配置不完整" : "未启用")
-                            .font(.system(size: 10))
+                            .font(MeloFont.caption)
                             .foregroundStyle(proxyEnabled ? colors.badgeTertiary : colors.fontTertiary)
                     }
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 10) {
                     Text(Localizer.tr("setting__network_proxy_host"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     TextField("127.0.0.1 或 proxy.example.com", text: $proxyHost)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .frame(width: 240)
                     Text(Localizer.tr("setting__network_proxy_port"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 40, alignment: .leading)
                     TextField("7890", text: $proxyPortText)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .frame(width: 80)
                     Text("1–65535")
-                        .font(.system(size: 9.5))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 10) {
                     Text(Localizer.tr("setting__network_proxy_username"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 64, alignment: .leading)
                     TextField("可选", text: $proxyUsername)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .frame(width: 200)
                     Text(Localizer.tr("setting__network_proxy_password"))
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 40, alignment: .leading)
                     Group {
                         if showProxyPassword {
@@ -2069,31 +1956,31 @@ struct SettingsView: View {
                         }
                     }
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .frame(width: 200)
                     Button {
                         showProxyPassword.toggle()
                     } label: {
                         Image(systemName: showProxyPassword ? "eye.slash" : "eye")
-                            .font(.system(size: 10))
+                            .font(.system(size: 12))
+                            .foregroundStyle(colors.fontSecondary)
                     }
                     .buttonStyle(.plain)
                     .help(showProxyPassword ? "隐藏密码" : "显示密码")
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(spacing: 8) {
                     Spacer()
                     Button("应用代理设置") {
                         applyProxySettings()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.primary)
-                    .controlSize(.small)
+                    .buttonStyle(.meloPrimary)
                 }
 
                 Text("说明：代理只作用于 App 内发起的 HTTP(S) 请求（自定义源脚本的取链/搜索、内置元数据接口、歌词等）；音频播放由 AVPlayer 直连媒体地址，不经过此代理。修改后需点击「应用代理设置」生效。")
-                    .font(.system(size: 9.5))
+                    .font(MeloFont.caption)
                     .foregroundStyle(colors.fontTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -2132,24 +2019,24 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Text("不喜欢规则")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Text("已保存 \(app.dislikeRules.count) 条规则")
-                        .font(.system(size: 11))
+                        .font(MeloFont.body)
                         .foregroundStyle(app.dislikeRules.isEmpty ? colors.fontTertiary : colors.font)
                     Button("编辑规则…") {
                         showDislikeRulesSheet = true
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.meloSecondary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
 
                 HStack(alignment: .top, spacing: 10) {
                     Text("")
                         .frame(width: 84, alignment: .leading)
                     Text("支持「歌曲名@艺术家 / 歌曲名 / @艺术家」，歌曲右键「不喜欢这首歌曲」会自动追加规则；播放时自动跳过的逻辑由 AppModel 处理。")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -2159,20 +2046,20 @@ struct SettingsView: View {
 
                 HStack(spacing: 10) {
                     Text("开机自启")
-                        .font(.system(size: 12))
+                        .font(MeloFont.body)
                         .frame(width: 84, alignment: .leading)
                     Toggle("开机时自动启动 Melo", isOn: Binding(
                         get: { app.openAtLogin },
                         set: { app.setOpenAtLogin($0) }
                     ))
                     .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .font(.system(size: 11))
+                    .font(MeloFont.body)
                     Text("通过系统登录项注册；需将 Melo 放入「应用程序」文件夹，ad-hoc 签名可能无法注册成功。")
-                        .font(.system(size: 10))
+                        .font(MeloFont.caption)
                         .foregroundStyle(colors.fontTertiary)
                     Spacer()
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -2181,10 +2068,10 @@ struct SettingsView: View {
 
     private var aboutCard: some View {
         MeloCard(title: "关于 Melo", subtitle: "LX Music Desktop 的 macOS 原生移植", systemImage: "info.circle") {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        RoundedRectangle(cornerRadius: MeloMetrics.controlRadius, style: .continuous)
                             .fill(LinearGradient(
                                 colors: [colors.primary, colors.primary.opacity(0.7)],
                                 startPoint: .topLeading,
@@ -2194,20 +2081,20 @@ struct SettingsView: View {
                             .font(.system(size: 18, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
                     }
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Melo for macOS")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(MeloFont.cardTitle)
                         Text("版本 \(appVersion) · 原生 SwiftUI（无 Electron / 无第三方依赖）")
-                            .font(.system(size: 10.5))
+                            .font(MeloFont.secondary)
                             .foregroundStyle(colors.fontSecondary)
                     }
                     Spacer()
                 }
 
                 Text("本项目是开源项目 LX Music Desktop（Apache-2.0）的 macOS 原生重写版本，复用其数据格式、主题、语言包与自定义源脚本生态。自定义源脚本由各自作者提供，本项目不内置任何第三方音源。")
-                    .font(.system(size: 11))
+                    .font(MeloFont.secondary)
                     .foregroundStyle(colors.fontSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -2218,20 +2105,19 @@ struct SettingsView: View {
                         }
                     } label: {
                         Label("原项目 LX Music Desktop", systemImage: "link")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Button {
                         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: app.data.dataDirectory.path)
                     } label: {
                         Label("数据目录", systemImage: "folder")
-                            .font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.meloSecondary)
 
                     Spacer()
                 }
+                .frame(minHeight: 28)
             }
         }
     }
@@ -2253,38 +2139,6 @@ struct SettingsView: View {
                 } else {
                     app.setTheme(id: app.theme.current.id)
                 }
-            }
-        )
-    }
-
-    private func themePickerLabel(_ theme: Theme) -> String {
-        theme.isCustom == true ? "\(theme.name)（自定义）" : theme.name
-    }
-
-    private var lightThemeBinding: Binding<String> {
-        Binding(
-            get: {
-                let stored = app.settings.string(SettingKeys.lightThemeId) ?? "green"
-                if app.theme.allThemes.contains(where: { $0.id == stored }) { return stored }
-                return app.theme.allThemes.first(where: { !$0.isDark })?.id ?? "green"
-            },
-            set: { newValue in
-                let dark = app.settings.string(SettingKeys.darkThemeId) ?? "black"
-                app.theme.setAutoTheme(lightId: newValue, darkId: dark)
-            }
-        )
-    }
-
-    private var darkThemeBinding: Binding<String> {
-        Binding(
-            get: {
-                let stored = app.settings.string(SettingKeys.darkThemeId) ?? "black"
-                if app.theme.allThemes.contains(where: { $0.id == stored }) { return stored }
-                return app.theme.allThemes.first(where: { $0.isDark })?.id ?? "black"
-            },
-            set: { newValue in
-                let light = app.settings.string(SettingKeys.lightThemeId) ?? "green"
-                app.theme.setAutoTheme(lightId: light, darkId: newValue)
             }
         )
     }
@@ -2324,118 +2178,6 @@ struct SettingsView: View {
         case "flac": return "无损 FLAC"
         case "flac24bit": return "无损 24BIT"
         default: return quality.uppercased()
-        }
-    }
-}
-
-// MARK: - 主题磁贴
-
-private struct ThemeTile: View {
-    let theme: Theme
-    let isSelected: Bool
-    var onEdit: (() -> Void)? = nil
-    var onDelete: (() -> Void)? = nil
-    let action: () -> Void
-
-    @Environment(\.meloColors) private var colors
-    @State private var hovering = false
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            tileButton
-            if theme.isCustom == true || onEdit != nil || onDelete != nil {
-                HStack(spacing: 3) {
-                    if let onEdit {
-                        actionIcon("pencil", help: "编辑自定义主题", action: onEdit)
-                    }
-                    if let onDelete {
-                        actionIcon("trash", help: "删除自定义主题", action: onDelete)
-                    }
-                }
-                .padding(5)
-            }
-        }
-    }
-
-    private var tileButton: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 7) {
-                ZStack(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(ThemePreview.background(theme))
-                        .frame(height: 52)
-                    HStack(spacing: 4) {
-                        Circle().fill(ThemePreview.primary(theme)).frame(width: 12, height: 12)
-                        Circle().fill(ThemePreview.badge(theme)).frame(width: 8, height: 8)
-                        Circle()
-                            .fill(ThemePreview.color("--color-badge-tertiary", in: theme) ?? ThemePreview.badge(theme))
-                            .frame(width: 8, height: 8)
-                    }
-                    .padding(8)
-                    overlayImage
-                }
-                HStack(spacing: 4) {
-                    Text(theme.name)
-                        .font(.system(size: 10.5, weight: isSelected ? .semibold : .regular))
-                        .foregroundStyle(colors.font)
-                        .lineLimit(1)
-                    if theme.isDark {
-                        Image(systemName: "moon.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(colors.fontTertiary)
-                    }
-                    if theme.isCustom == true {
-                        Text("自定义")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(colors.primary)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(colors.primary.opacity(0.10), in: Capsule())
-                    }
-                    Spacer(minLength: 0)
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(colors.primary)
-                    }
-                }
-            }
-            .padding(8)
-            .background(
-                colors.mainBackground.opacity(colors.isDark ? 0.5 : 0.6),
-                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(isSelected ? colors.primary : colors.border, lineWidth: isSelected ? 1.5 : 1)
-            )
-            .opacity(hovering ? 0.92 : 1)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-    }
-
-    private func actionIcon(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(colors.fontSecondary)
-                .frame(width: 18, height: 18)
-                .background(colors.mainBackground.opacity(0.88), in: Circle())
-                .overlay(Circle().strokeBorder(colors.border, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .help(help)
-    }
-
-    @ViewBuilder
-    private var overlayImage: some View {
-        if let raw = theme.config.extInfo["--background-image"], raw != "none" {
-            Image(systemName: "photo")
-                .font(.system(size: 9))
-                .foregroundStyle(colors.fontTertiary)
-                .padding(6)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
     }
 }
